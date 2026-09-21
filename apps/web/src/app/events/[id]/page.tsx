@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { CalendarDays, MapPin, Users, Star } from 'lucide-react';
@@ -18,21 +17,15 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
+import { PitchLineup } from '@/components/pitch-lineup';
 import { PlayerAvatar } from '@/components/player-avatar';
-import {
-  formatDate,
-  formatRange,
-  POSITIONS,
-  POSITION_LABEL,
-  type PositionValue,
-} from '@/lib/format';
+import { formatDate, formatRange, POSITION_LABEL, type PositionValue } from '@/lib/format';
 
 export default function EventPage() {
   const { id } = useParams<{ id: string }>();
   const utils = trpc.useUtils();
   const ev = trpc.events.get.useQuery({ id });
   const me = trpc.auth.me.useQuery(undefined, { retry: false });
-  const [position, setPosition] = useState<PositionValue>('MID');
 
   const refresh = () => utils.events.get.invalidate({ id });
   const onErr = (e: { message: string }) => toast.error(e.message);
@@ -74,7 +67,7 @@ export default function EventPage() {
   });
   const assign = trpc.events.assignTeam.useMutation({ onSuccess: refresh, onError: onErr });
 
-  if (ev.isLoading) return <Skeleton className="h-72 w-full rounded-xl" />;
+  if (ev.isLoading) return <Skeleton className="h-96 w-full rounded-xl" />;
   if (ev.error || !ev.data) return <Card className="p-8 text-center text-sm">Гру не знайдено</Card>;
 
   const e = ev.data;
@@ -83,6 +76,7 @@ export default function EventPage() {
   const isOrganizer = !!userId && e.organizer.id === userId;
   const full = e.availableSlots <= 0;
   const canRate = e.status === 'FINISHED' && mine?.status === 'ATTENDED';
+  const canJoin = e.status === 'UPCOMING' && !mine && !full;
 
   return (
     <div className="space-y-4">
@@ -111,67 +105,35 @@ export default function EventPage() {
         <p className="text-xs text-muted-foreground">Організатор: {e.organizer.name}</p>
       </Card>
 
-      {/* Rating CTA */}
       {canRate && (
         <Link href={`/events/${e.id}/rate`} className={cn(buttonVariants(), 'w-full')}>
           <Star className="mr-1 size-4" /> Оцінити гравців
         </Link>
       )}
 
-      {/* Join / Leave */}
-      {e.status === 'UPCOMING' && (
-        <Card className="space-y-3 p-4">
-          {!me.data ? (
-            <Link href="/login" className={cn(buttonVariants(), 'w-full')}>
-              Увійти, щоб приєднатися
-            </Link>
-          ) : mine ? (
-            <div className="space-y-3">
-              <p className="text-sm">
-                Ти в грі як{' '}
-                <span className="font-medium">
-                  {POSITION_LABEL[mine.preferredPosition as PositionValue]}
-                </span>
-              </p>
-              <Button
-                variant="outline"
-                className="w-full"
-                disabled={leave.isPending}
-                onClick={() => leave.mutate({ eventId: e.id })}
-              >
-                Вийти з гри
-              </Button>
-            </div>
-          ) : (
-            <div className="flex gap-2">
-              <Select
-                value={position}
-                onValueChange={(v) => setPosition((v ?? 'MID') as PositionValue)}
-              >
-                <SelectTrigger className="flex-1">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {POSITIONS.map((p) => (
-                    <SelectItem key={p} value={p}>
-                      {POSITION_LABEL[p]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button
-                className="flex-1"
-                disabled={full || join.isPending}
-                onClick={() => join.mutate({ eventId: e.id, position })}
-              >
-                {full ? 'Повна' : 'Приєднатися'}
-              </Button>
-            </div>
-          )}
-        </Card>
+      {/* Pitch — tap a "+" on a line to join at that position */}
+      <PitchLineup
+        participants={e.participants}
+        teams={e.teams}
+        meId={userId}
+        canJoin={canJoin}
+        isLoggedIn={!!me.data}
+        joinPending={join.isPending}
+        onJoin={(position) => join.mutate({ eventId: e.id, position })}
+      />
+
+      {mine && e.status === 'UPCOMING' && (
+        <Button
+          variant="outline"
+          className="w-full"
+          disabled={leave.isPending}
+          onClick={() => leave.mutate({ eventId: e.id })}
+        >
+          Вийти з гри ({POSITION_LABEL[mine.preferredPosition as PositionValue]})
+        </Button>
       )}
 
-      {/* Organizer controls */}
+      {/* Organizer lifecycle controls */}
       {isOrganizer && e.status !== 'FINISHED' && e.status !== 'CANCELLED' && (
         <Card className="space-y-3 p-4">
           <p className="text-sm font-semibold text-muted-foreground">Керування (організатор)</p>
@@ -206,55 +168,37 @@ export default function EventPage() {
         </Card>
       )}
 
-      {/* Participants (+ team assignment for organizer) */}
-      <div>
-        <h2 className="mb-2 text-sm font-semibold text-muted-foreground">
-          Гравці ({e.joinedCount})
-        </h2>
-        <div className="space-y-2">
+      {/* Organizer team assignment */}
+      {isOrganizer && e.status !== 'CANCELLED' && e.participants.length > 0 && (
+        <Card className="space-y-2 p-4">
+          <p className="text-sm font-semibold text-muted-foreground">Команди</p>
           {e.participants.map((p) => (
-            <Card key={p.id} className="flex items-center justify-between gap-2 p-3">
+            <div key={p.id} className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
-                <PlayerAvatar name={p.user.name} url={p.user.avatarUrl} className="size-8" />
+                <PlayerAvatar name={p.user.name} url={p.user.avatarUrl} className="size-7" />
                 <span className="text-sm">{p.user.name}</span>
               </div>
-              <div className="flex items-center gap-2">
-                <Badge variant="secondary">
-                  {POSITION_LABEL[p.preferredPosition as PositionValue]}
-                </Badge>
-                {isOrganizer && e.status !== 'CANCELLED' ? (
-                  <Select
-                    value={p.teamId ?? ''}
-                    onValueChange={(v) =>
-                      assign.mutate({ eventId: e.id, userId: p.user.id, teamId: v || null })
-                    }
-                  >
-                    <SelectTrigger className="h-8 w-28 text-xs">
-                      <SelectValue placeholder="Команда" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {e.teams.map((t) => (
-                        <SelectItem key={t.id} value={t.id}>
-                          {t.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  p.teamId && (
-                    <Badge variant="outline" className="text-xs">
-                      {e.teams.find((t) => t.id === p.teamId)?.name}
-                    </Badge>
-                  )
-                )}
-              </div>
-            </Card>
+              <Select
+                value={p.teamId ?? ''}
+                onValueChange={(v) =>
+                  assign.mutate({ eventId: e.id, userId: p.user.id, teamId: v || null })
+                }
+              >
+                <SelectTrigger className="h-8 w-28 text-xs">
+                  <SelectValue placeholder="Команда" />
+                </SelectTrigger>
+                <SelectContent>
+                  {e.teams.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>
+                      {t.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           ))}
-          {e.participants.length === 0 && (
-            <p className="text-sm text-muted-foreground">Ще ніхто не приєднався.</p>
-          )}
-        </div>
-      </div>
+        </Card>
+      )}
     </div>
   );
 }
