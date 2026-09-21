@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
+import { PlayerAvatar } from '@/components/player-avatar';
 import {
   formatDate,
   formatRange,
@@ -92,7 +93,10 @@ export default function EventPage() {
         </div>
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <MapPin className="size-4" />
-          {e.field.venue.name}, {e.field.venue.city} · {e.field.name}
+          <Link href={`/venues/${e.field.venue.id}`} className="underline-offset-2 hover:underline">
+            {e.field.venue.name}
+          </Link>
+          , {e.field.venue.city} · {e.field.name}
         </div>
         <div className="flex flex-wrap gap-2">
           <Badge variant="secondary">
@@ -210,7 +214,10 @@ export default function EventPage() {
         <div className="space-y-2">
           {e.participants.map((p) => (
             <Card key={p.id} className="flex items-center justify-between gap-2 p-3">
-              <span className="text-sm">{p.user.name}</span>
+              <div className="flex items-center gap-2">
+                <PlayerAvatar name={p.user.name} url={p.user.avatarUrl} className="size-8" />
+                <span className="text-sm">{p.user.name}</span>
+              </div>
               <div className="flex items-center gap-2">
                 <Badge variant="secondary">
                   {POSITION_LABEL[p.preferredPosition as PositionValue]}

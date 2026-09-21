@@ -8,7 +8,8 @@ import { trpc } from '@/lib/trpc';
 import { Card } from '@/components/ui/card';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Slider } from '@/components/ui/slider';
+import { StarRating } from '@/components/star-rating';
+import { PlayerAvatar } from '@/components/player-avatar';
 import { cn } from '@/lib/utils';
 
 const SKILLS = [
@@ -69,12 +70,28 @@ export default function RatePage() {
         <h1 className="text-2xl font-bold">Оцінити гравців</h1>
         <p className="text-sm text-muted-foreground">Залишилось: {list.length}</p>
       </div>
-      <RatingForm key={current.userId} eventId={id} userId={current.userId} name={current.name} />
+      <RatingForm
+        key={current.userId}
+        eventId={id}
+        userId={current.userId}
+        name={current.name}
+        avatarUrl={current.avatarUrl}
+      />
     </div>
   );
 }
 
-function RatingForm({ eventId, userId, name }: { eventId: string; userId: string; name: string }) {
+function RatingForm({
+  eventId,
+  userId,
+  name,
+  avatarUrl,
+}: {
+  eventId: string;
+  userId: string;
+  name: string;
+  avatarUrl: string | null;
+}) {
   const utils = trpc.useUtils();
   const [scores, setScores] = useState<Scores>(DEFAULTS);
   const submit = trpc.ratings.submit.useMutation({
@@ -87,22 +104,17 @@ function RatingForm({ eventId, userId, name }: { eventId: string; userId: string
 
   return (
     <Card className="space-y-5 p-5">
-      <p className="text-lg font-semibold">{name}</p>
+      <div className="flex items-center gap-3">
+        <PlayerAvatar name={name} url={avatarUrl} className="size-11" />
+        <p className="text-lg font-semibold">{name}</p>
+      </div>
       <div className="space-y-4">
         {SKILLS.map(([key, label]) => (
-          <div key={key} className="space-y-2">
-            <div className="flex items-center justify-between text-sm">
-              <span>{label}</span>
-              <span className="font-medium tabular-nums text-primary">{scores[key]}</span>
-            </div>
-            <Slider
-              min={1}
-              max={5}
-              step={1}
-              value={[scores[key]]}
-              onValueChange={(v) =>
-                setScores((s) => ({ ...s, [key]: Array.isArray(v) ? v[0] : v }))
-              }
+          <div key={key} className="flex items-center justify-between gap-3">
+            <span className="text-sm">{label}</span>
+            <StarRating
+              value={scores[key]}
+              onChange={(v) => setScores((s) => ({ ...s, [key]: v }))}
             />
           </div>
         ))}

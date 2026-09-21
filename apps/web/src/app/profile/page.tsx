@@ -6,6 +6,7 @@ import { LogOut } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import { clearToken } from '@/lib/auth';
 import { formatDate } from '@/lib/format';
+import { AvatarEditor } from '@/components/avatar-editor';
 import { Card } from '@/components/ui/card';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -57,11 +58,14 @@ export default function ProfilePage() {
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">{me.data.user.name}</h1>
-          <Badge variant="secondary" className="mt-1">
-            {me.data.user.role}
-          </Badge>
+        <div className="flex items-center gap-3">
+          <AvatarEditor name={me.data.user.name} url={me.data.user.avatarUrl} />
+          <div>
+            <h1 className="text-2xl font-bold">{me.data.user.name}</h1>
+            <Badge variant="secondary" className="mt-1">
+              {me.data.user.role}
+            </Badge>
+          </div>
         </div>
         <Button variant="ghost" size="icon" onClick={logout} aria-label="Вийти">
           <LogOut className="size-5" />

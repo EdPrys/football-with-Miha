@@ -71,6 +71,7 @@ export const eventsRouter = router({
           endAt: e.endAt,
           numberOfTeams: e.numberOfTeams,
           playersPerTeam: e.playersPerTeam,
+          venueId: e.field.venue.id,
           venue: e.field.venue.name,
           city: e.field.venue.city,
           field: e.field.name,
