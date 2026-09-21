@@ -29,6 +29,14 @@ enum InvitationStatus {
   DECLINED
 }
 
+// Access roles, ordered PLAYER < MANAGER < ADMIN. Everyone can play regardless
+// of role; higher roles add staff abilities. See docs/PRODUCT_PLAN.md.
+enum Role {
+  PLAYER // joins events, plays, rates
+  MANAGER // + creates events (also a player)
+  ADMIN // + manages users and creates venues/fields (also a player)
+}
+
 // MVP positions only. Extensible later (LB, CB, CDM, ...).
 enum Position {
   GK
@@ -60,6 +68,7 @@ model User {
   name         String
   email        String   @unique
   passwordHash String
+  role         Role     @default(PLAYER)
   avatarUrl    String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt

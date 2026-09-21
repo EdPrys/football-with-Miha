@@ -28,6 +28,18 @@ Build the MVP around this loop. Do NOT build future features (payments, AI team 
 5. **Shared types come from packages** (`@app/db` Prisma types, `@app/domain` enums/DTOs). Don't redefine enums per app.
 6. Develop **vertically** (full loop first), not entity-by-entity.
 
+## Roles & access
+
+Single `User.role` enum, ordered `PLAYER < MANAGER < ADMIN` (higher inherits lower). **Everyone can play** regardless of role — a role only adds staff abilities.
+
+- **PLAYER**: join events, pick position, play, rate.
+- **MANAGER**: + create events (also a player).
+- **ADMIN**: + manage users, create Venues/Fields/halls (also a player). Only admins create places, so the catalogue isn't spammed with empty venues.
+
+Enforce in `apps/api/src/trpc.ts` via `protectedProcedure` / `managerProcedure` / `adminProcedure` (built on `roleAtLeast` from `@app/domain`). `events.create` = manager+, venue/field creation = admin.
+
+Planned frontends: `apps/web` (players), `apps/admin-web` (admin — user mgmt + venue/field CRUD, future), React Native mobile (future).
+
 ## Package names
 
 - `@app/db` — Prisma client + schema (`packages/db`)

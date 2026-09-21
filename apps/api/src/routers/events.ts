@@ -1,13 +1,13 @@
 import { z } from 'zod';
 import { createEvent, eventCapacity, DomainError } from '@app/domain';
 import { ParticipantStatus } from '@app/db';
-import { router, publicProcedure, protectedProcedure } from '../trpc.js';
+import { router, publicProcedure, managerProcedure } from '../trpc.js';
 
 // Participants that count toward a filled slot.
 const ACTIVE_STATUSES: ParticipantStatus[] = [ParticipantStatus.JOINED, ParticipantStatus.ATTENDED];
 
 export const eventsRouter = router({
-  create: protectedProcedure
+  create: managerProcedure
     .input(
       z.object({
         fieldId: z.string().min(1),

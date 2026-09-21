@@ -1,6 +1,6 @@
 import { initTRPC, TRPCError } from '@trpc/server';
 import superjson from 'superjson';
-import { DomainError, type DomainErrorCode } from '@app/domain';
+import { DomainError, roleAtLeast, type DomainErrorCode, type RoleName } from '@app/domain';
 import type { Context } from './context.js';
 
 const t = initTRPC.context<Context>().create({ transformer: superjson });
@@ -32,3 +32,16 @@ export const protectedProcedure = publicProcedure.use(({ ctx, next }) => {
   if (!ctx.user) throw new TRPCError({ code: 'UNAUTHORIZED' });
   return next({ ctx: { ...ctx, user: ctx.user } });
 });
+
+/** Any authenticated user can play; higher roles add staff abilities. */
+function requireRole(required: RoleName) {
+  return protectedProcedure.use(({ ctx, next }) => {
+    if (!roleAtLeast(ctx.user.role, required)) {
+      throw new TRPCError({ code: 'FORBIDDEN', message: `Requires ${required} role` });
+    }
+    return next({ ctx });
+  });
+}
+
+export const managerProcedure = requireRole('MANAGER');
+export const adminProcedure = requireRole('ADMIN');
