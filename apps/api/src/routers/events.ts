@@ -1,7 +1,7 @@
 import { z } from 'zod';
-import { createEvent, eventCapacity, DomainError } from '@app/domain';
-import { ParticipantStatus } from '@app/db';
-import { router, publicProcedure, managerProcedure } from '../trpc.js';
+import { createEvent, eventCapacity, joinEvent, leaveEvent, DomainError } from '@app/domain';
+import { ParticipantStatus, Position, type Prisma } from '@app/db';
+import { router, publicProcedure, protectedProcedure, managerProcedure } from '../trpc.js';
 
 // Participants that count toward a filled slot.
 const ACTIVE_STATUSES: ParticipantStatus[] = [ParticipantStatus.JOINED, ParticipantStatus.ATTENDED];
@@ -18,11 +18,59 @@ export const eventsRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const event = await createEvent(ctx.prisma, {
-        organizerId: ctx.user.id,
-        ...input,
-      });
+      const event = await createEvent(ctx.prisma, { organizerId: ctx.user.id, ...input });
       return { id: event.id };
+    }),
+
+  // Discovery feed: upcoming events with free-slot info and simple filters.
+  list: publicProcedure
+    .input(
+      z
+        .object({
+          dateFrom: z.date().optional(),
+          dateTo: z.date().optional(),
+          playersPerTeam: z.number().int().min(1).optional(),
+          onlyAvailable: z.boolean().optional(),
+        })
+        .optional(),
+    )
+    .query(async ({ ctx, input }) => {
+      const where: Prisma.EventWhereInput = {
+        status: 'UPCOMING',
+        startAt: {
+          gte: input?.dateFrom ?? new Date(),
+          ...(input?.dateTo ? { lte: input.dateTo } : {}),
+        },
+        ...(input?.playersPerTeam ? { playersPerTeam: input.playersPerTeam } : {}),
+      };
+
+      const events = await ctx.prisma.event.findMany({
+        where,
+        orderBy: { startAt: 'asc' },
+        include: {
+          field: { include: { venue: true } },
+          _count: { select: { participants: { where: { status: { in: ACTIVE_STATUSES } } } } },
+        },
+      });
+
+      const mapped = events.map((e) => {
+        const capacity = eventCapacity(e);
+        return {
+          id: e.id,
+          startAt: e.startAt,
+          endAt: e.endAt,
+          numberOfTeams: e.numberOfTeams,
+          playersPerTeam: e.playersPerTeam,
+          venue: e.field.venue.name,
+          city: e.field.venue.city,
+          field: e.field.name,
+          capacity,
+          joinedCount: e._count.participants,
+          availableSlots: Math.max(0, capacity - e._count.participants),
+        };
+      });
+
+      return input?.onlyAvailable ? mapped.filter((e) => e.availableSlots > 0) : mapped;
     }),
 
   // Full event detail for the Event page.
@@ -50,4 +98,22 @@ export const eventsRouter = router({
       availableSlots: Math.max(0, capacity - event.participants.length),
     };
   }),
+
+  join: protectedProcedure
+    .input(z.object({ eventId: z.string().min(1), position: z.nativeEnum(Position) }))
+    .mutation(async ({ ctx, input }) => {
+      const p = await joinEvent(ctx.prisma, {
+        eventId: input.eventId,
+        userId: ctx.user.id,
+        position: input.position,
+      });
+      return { participantId: p.id, status: p.status, position: p.preferredPosition };
+    }),
+
+  leave: protectedProcedure
+    .input(z.object({ eventId: z.string().min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      await leaveEvent(ctx.prisma, { eventId: input.eventId, userId: ctx.user.id });
+      return { ok: true };
+    }),
 });

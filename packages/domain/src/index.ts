@@ -7,3 +7,5 @@ export * from './events/capacity.js';
 export * from './events/team-names.js';
 export * from './events/create.js';
 export * from './auth/roles.js';
+export * from './events/join.js';
+export * from './events/leave.js';
