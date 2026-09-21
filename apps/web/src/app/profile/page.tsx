@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { LogOut } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import { clearToken } from '@/lib/auth';
+import { formatDate } from '@/lib/format';
 import { Card } from '@/components/ui/card';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -25,6 +26,10 @@ export default function ProfilePage() {
   const utils = trpc.useUtils();
   const me = trpc.auth.me.useQuery(undefined, { retry: false });
   const profile = trpc.players.profile.useQuery(
+    { userId: me.data?.user.id ?? '' },
+    { enabled: !!me.data },
+  );
+  const history = trpc.players.matchHistory.useQuery(
     { userId: me.data?.user.id ?? '' },
     { enabled: !!me.data },
   );
@@ -88,6 +93,26 @@ export default function ProfilePage() {
           ))}
         </div>
       </Card>
+
+      <div>
+        <h2 className="mb-2 text-sm font-semibold text-muted-foreground">Історія матчів</h2>
+        <div className="space-y-2">
+          {(history.data ?? []).map((m) => (
+            <Card key={m.eventId} className="flex items-center justify-between p-3 text-sm">
+              <div>
+                <div>{formatDate(m.date)}</div>
+                <div className="text-xs text-muted-foreground">
+                  {m.venue} · {m.field}
+                </div>
+              </div>
+              <Badge variant="secondary">{m.team ?? m.position}</Badge>
+            </Card>
+          ))}
+          {history.data && history.data.length === 0 && (
+            <p className="text-sm text-muted-foreground">Ще немає зіграних матчів.</p>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

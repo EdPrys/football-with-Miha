@@ -83,6 +83,39 @@ export const eventsRouter = router({
       return input?.onlyAvailable ? mapped.filter((e) => e.availableSlots > 0) : mapped;
     }),
 
+  // Events the current user organizes or actively participates in.
+  mine: protectedProcedure.query(async ({ ctx }) => {
+    const events = await ctx.prisma.event.findMany({
+      where: {
+        OR: [
+          { organizerId: ctx.user.id },
+          { participants: { some: { userId: ctx.user.id, status: { in: ACTIVE_STATUSES } } } },
+        ],
+      },
+      orderBy: { startAt: 'desc' },
+      include: {
+        field: { include: { venue: true } },
+        _count: { select: { participants: { where: { status: { in: ACTIVE_STATUSES } } } } },
+      },
+    });
+    return events.map((e) => {
+      const capacity = eventCapacity(e);
+      return {
+        id: e.id,
+        startAt: e.startAt,
+        endAt: e.endAt,
+        status: e.status,
+        playersPerTeam: e.playersPerTeam,
+        venue: e.field.venue.name,
+        field: e.field.name,
+        isOrganizer: e.organizerId === ctx.user.id,
+        joinedCount: e._count.participants,
+        capacity,
+        availableSlots: Math.max(0, capacity - e._count.participants),
+      };
+    });
+  }),
+
   // Full event detail for the Event page.
   get: publicProcedure.input(z.object({ id: z.string().min(1) })).query(async ({ ctx, input }) => {
     const event = await ctx.prisma.event.findUnique({

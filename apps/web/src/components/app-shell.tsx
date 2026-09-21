@@ -2,13 +2,14 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Compass, PlusCircle, User, Moon, Sun } from 'lucide-react';
+import { Compass, CalendarCheck, PlusCircle, User, Moon, Sun } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
 const tabs = [
   { href: '/', label: 'Пошук', icon: Compass },
+  { href: '/my', label: 'Мої ігри', icon: CalendarCheck },
   { href: '/events/new', label: 'Створити', icon: PlusCircle },
   { href: '/profile', label: 'Профіль', icon: User },
 ];
@@ -43,7 +44,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <main className="mx-auto w-full max-w-md flex-1 px-4 pb-24 pt-4">{children}</main>
 
       <nav className="fixed inset-x-0 bottom-0 z-20 border-t bg-background">
-        <div className="mx-auto grid max-w-md grid-cols-3">
+        <div className="mx-auto grid max-w-md grid-cols-4">
           {tabs.map((t) => {
             const active = t.href === '/' ? pathname === '/' : pathname.startsWith(t.href);
             const Icon = t.icon;
