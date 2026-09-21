@@ -144,12 +144,19 @@ export const eventsRouter = router({
   }),
 
   join: protectedProcedure
-    .input(z.object({ eventId: z.string().min(1), position: z.nativeEnum(Position) }))
+    .input(
+      z.object({
+        eventId: z.string().min(1),
+        position: z.nativeEnum(Position),
+        teamId: z.string().min(1).nullable().optional(),
+      }),
+    )
     .mutation(async ({ ctx, input }) => {
       const p = await joinEvent(ctx.prisma, {
         eventId: input.eventId,
         userId: ctx.user.id,
         position: input.position,
+        teamId: input.teamId,
       });
       return { participantId: p.id, status: p.status, position: p.preferredPosition };
     }),

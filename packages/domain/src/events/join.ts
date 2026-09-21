@@ -34,12 +34,13 @@ export interface JoinInput {
   eventId: string;
   userId: string;
   position: Position;
+  teamId?: string | null; // pick a specific team's slot on the pitch
 }
 
 /**
- * Join an event atomically: the capacity check and the write happen in one
- * transaction so two people racing for the last slot can't both get in. A user
- * who previously left (CANCELLED/NO_SHOW) re-activates their existing row.
+ * Join an event atomically. When a teamId is given (picking a slot on the pitch)
+ * we also validate the team belongs to the event and isn't already full.
+ * A user who previously left re-activates their existing row.
  */
 export async function joinEvent(prisma: PrismaClient, input: JoinInput): Promise<EventParticipant> {
   return prisma.$transaction(async (tx) => {
@@ -49,6 +50,26 @@ export async function joinEvent(prisma: PrismaClient, input: JoinInput): Promise
     });
     if (!event) throw new DomainError('NOT_FOUND', 'Event not found');
 
+    if (input.teamId != null) {
+      const team = await tx.team.findFirst({
+        where: { id: input.teamId, eventId: input.eventId },
+        select: { id: true },
+      });
+      if (!team) throw new DomainError('VALIDATION', 'Team does not belong to this event');
+
+      const teamCount = await tx.eventParticipant.count({
+        where: {
+          eventId: input.eventId,
+          teamId: input.teamId,
+          status: { in: ACTIVE_STATUSES },
+          userId: { not: input.userId },
+        },
+      });
+      if (teamCount >= event.playersPerTeam) {
+        throw new DomainError('INVALID_STATE', 'This team is full');
+      }
+    }
+
     const existing = await tx.eventParticipant.findUnique({
       where: { eventId_userId: { eventId: input.eventId, userId: input.userId } },
     });
@@ -57,7 +78,7 @@ export async function joinEvent(prisma: PrismaClient, input: JoinInput): Promise
     const activeCount = await tx.eventParticipant.count({
       where: {
         eventId: input.eventId,
-        status: { in: ['JOINED', 'ATTENDED'] },
+        status: { in: ACTIVE_STATUSES },
         userId: { not: input.userId },
       },
     });
@@ -69,19 +90,17 @@ export async function joinEvent(prisma: PrismaClient, input: JoinInput): Promise
       alreadyActive,
     });
 
+    const data = {
+      status: 'JOINED' as const,
+      preferredPosition: input.position,
+      teamId: input.teamId ?? null,
+    };
+
     if (existing) {
-      return tx.eventParticipant.update({
-        where: { id: existing.id },
-        data: { status: 'JOINED', preferredPosition: input.position, teamId: null },
-      });
+      return tx.eventParticipant.update({ where: { id: existing.id }, data });
     }
     return tx.eventParticipant.create({
-      data: {
-        eventId: input.eventId,
-        userId: input.userId,
-        status: 'JOINED',
-        preferredPosition: input.position,
-      },
+      data: { eventId: input.eventId, userId: input.userId, ...data },
     });
   });
 }

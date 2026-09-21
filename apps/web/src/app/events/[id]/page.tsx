@@ -117,13 +117,29 @@ export default function EventPage() {
         participants={e.participants}
         teams={e.teams}
         formation={formationFor(e.playersPerTeam)}
-        numberOfTeams={e.numberOfTeams}
+        playersPerTeam={e.playersPerTeam}
         meId={userId}
-        canJoin={canJoin}
+        canJoinBase={canJoin}
         isLoggedIn={!!me.data}
         joinPending={join.isPending}
-        onJoin={(position) => join.mutate({ eventId: e.id, position })}
+        onJoin={(position, teamId) => join.mutate({ eventId: e.id, position, teamId })}
       />
+
+      {e.participants.some((p) => !p.teamId) && (
+        <Card className="space-y-2 p-3">
+          <p className="text-xs font-medium text-muted-foreground">Очікують команду</p>
+          <div className="flex flex-wrap gap-3">
+            {e.participants
+              .filter((p) => !p.teamId)
+              .map((p) => (
+                <div key={p.id} className="flex w-16 flex-col items-center gap-1">
+                  <PlayerAvatar name={p.user.name} url={p.user.avatarUrl} className="size-10" />
+                  <span className="max-w-16 truncate text-[11px]">{p.user.name}</span>
+                </div>
+              ))}
+          </div>
+        </Card>
+      )}
 
       {mine && e.status === 'UPCOMING' && (
         <Button
