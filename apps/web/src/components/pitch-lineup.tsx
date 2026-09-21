@@ -124,25 +124,45 @@ export function PitchLineup({
     </div>
   );
 
+  const net = {
+    backgroundImage:
+      'repeating-linear-gradient(90deg, rgba(255,255,255,0.35) 0 1px, transparent 1px 6px),' +
+      'repeating-linear-gradient(0deg, rgba(255,255,255,0.35) 0 1px, transparent 1px 6px)',
+  };
+
   return (
-    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-b from-emerald-600 to-emerald-800 p-4 shadow-inner">
-      <div className="pointer-events-none absolute inset-3 rounded-xl border-2 border-white/25" />
-      <div className="pointer-events-none absolute left-1/2 top-1/2 size-24 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white/25" />
+    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-b from-emerald-600 to-emerald-800 px-4 py-6 shadow-inner">
+      {/* pitch markings */}
+      <div className="pointer-events-none absolute inset-x-3 inset-y-6 rounded-lg border-2 border-white/25" />
+      <div className="pointer-events-none absolute left-1/2 top-1/2 size-16 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white/20" />
       <div className="pointer-events-none absolute inset-x-3 top-1/2 h-0.5 -translate-y-px bg-white/25" />
+      {/* goals */}
+      <div
+        className="pointer-events-none absolute left-1/2 top-2 h-4 w-16 -translate-x-1/2 rounded-t-sm border-2 border-b-0 border-white/70"
+        style={net}
+      />
+      <div
+        className="pointer-events-none absolute bottom-2 left-1/2 h-4 w-16 -translate-x-1/2 rounded-b-sm border-2 border-t-0 border-white/70"
+        style={net}
+      />
 
       {facing ? (
-        <div className="relative flex min-h-[30rem] flex-col justify-between py-1">
-          <div className="space-y-2">
+        <div className="relative flex min-h-[30rem] flex-col">
+          <div className="flex flex-1 flex-col justify-evenly">
             <TeamLabel team={teams[1]} ti={1} />
-            <TeamBlock team={teams[1]} ti={1} order={DOWN} />
+            {DOWN.map((line) => (
+              <Slot key={line} line={line} team={teams[1]} ti={1} />
+            ))}
           </div>
-          <div className="space-y-2">
-            <TeamBlock team={teams[0]} ti={0} order={UP} />
+          <div className="flex flex-1 flex-col justify-evenly">
+            {UP.map((line) => (
+              <Slot key={line} line={line} team={teams[0]} ti={0} />
+            ))}
             <TeamLabel team={teams[0]} ti={0} />
           </div>
         </div>
       ) : (
-        <div className="relative space-y-5 py-2">
+        <div className="relative space-y-5">
           {teams.map((team, ti) => (
             <div key={team.id} className="space-y-2">
               <TeamLabel team={team} ti={ti} />
