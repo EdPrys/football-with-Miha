@@ -6,3 +6,4 @@ out
 coverage
 **/generated/**
 **/migrations/**
+apps/web

@@ -27,5 +27,12 @@
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",
     "vitest": "^5.0.1"
+  },
+  "types": "./src/routers/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/routers/index.ts",
+      "default": "./src/routers/index.ts"
+    }
   }
 }
