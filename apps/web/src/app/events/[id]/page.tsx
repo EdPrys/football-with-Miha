@@ -19,6 +19,7 @@ import {
 import { cn } from '@/lib/utils';
 import { PitchLineup } from '@/components/pitch-lineup';
 import { PlayerAvatar } from '@/components/player-avatar';
+import { formationFor } from '@/lib/formation';
 import { formatDate, formatRange, POSITION_LABEL, type PositionValue } from '@/lib/format';
 
 export default function EventPage() {
@@ -115,6 +116,8 @@ export default function EventPage() {
       <PitchLineup
         participants={e.participants}
         teams={e.teams}
+        formation={formationFor(e.playersPerTeam)}
+        numberOfTeams={e.numberOfTeams}
         meId={userId}
         canJoin={canJoin}
         isLoggedIn={!!me.data}

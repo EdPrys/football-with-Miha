@@ -14,3 +14,4 @@ export * from './events/manage.js';
 export * from './skills/recompute.js';
 export * from './ratings/submit.js';
 export * from './players/attendance.js';
+export * from './events/formation.js';
