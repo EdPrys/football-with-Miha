@@ -11,3 +11,5 @@ export * from './events/join.js';
 export * from './events/leave.js';
 export * from './events/lifecycle.js';
 export * from './events/manage.js';
+export * from './skills/recompute.js';
+export * from './ratings/submit.js';
