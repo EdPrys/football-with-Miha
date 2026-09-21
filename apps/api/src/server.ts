@@ -7,7 +7,10 @@ import { createContext } from './context.js';
 export function buildServer() {
   const app = Fastify({ logger: { level: 'info' } });
 
-  app.register(cors, { origin: true });
+  // In production set WEB_ORIGIN to the web app's URL; defaults to reflecting any
+  // origin for local dev. Auth is via bearer token, so credentials stay off.
+  const origin = process.env.WEB_ORIGIN ? process.env.WEB_ORIGIN.split(',') : true;
+  app.register(cors, { origin, credentials: false });
 
   app.get('/health', async () => ({ status: 'ok' }));
 
