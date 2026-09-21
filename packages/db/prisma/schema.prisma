@@ -1,0 +1,222 @@
+// Football App — MVP schema. See docs/PRODUCT_PLAN.md.
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- Enums ----------
+enum EventStatus {
+  UPCOMING
+  IN_PROGRESS
+  FINISHED
+  CANCELLED
+}
+
+enum ParticipantStatus {
+  JOINED
+  CANCELLED
+  ATTENDED
+  NO_SHOW
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
+// MVP positions only. Extensible later (LB, CB, CDM, ...).
+enum Position {
+  GK
+  DEF
+  MID
+  FWD
+}
+
+enum SkillType {
+  PACE
+  DRIBBLING
+  PASSING
+  SHOOTING
+  DEFENDING
+  PHYSICAL
+}
+
+enum NotificationType {
+  INVITATION_RECEIVED
+  INVITATION_ACCEPTED
+  EVENT_CANCELLED
+  EVENT_APPROACHING
+  RATING_AVAILABLE
+}
+
+// ---------- Users & profile ----------
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  avatarUrl    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  profile          PlayerProfile?
+  organizedEvents  Event[]           @relation("EventOrganizer")
+  participations   EventParticipant[]
+  invitationsSent     Invitation[]   @relation("InvitationInviter")
+  invitationsReceived Invitation[]   @relation("InvitationInvited")
+  ratingsGiven     Rating[]          @relation("RatingRater")
+  ratingsReceived  Rating[]          @relation("RatingRatee")
+  notifications    Notification[]
+}
+
+// The "football profile". Aggregated skills are stored in PlayerSkill rows,
+// recomputed from ratings by the domain aggregation service.
+model PlayerProfile {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bio       String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  skills PlayerSkill[]
+}
+
+// One row per (profile, skill). value + ratingsCount are derived, never user-set.
+model PlayerSkill {
+  id            String        @id @default(cuid())
+  profileId     String
+  profile       PlayerProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  skill         SkillType
+  value         Float         @default(0)
+  ratingsCount  Int           @default(0)
+  updatedAt     DateTime      @updatedAt
+
+  @@unique([profileId, skill])
+}
+
+// ---------- Venues & fields ----------
+model Venue {
+  id        String   @id @default(cuid())
+  name      String
+  city      String
+  createdAt DateTime @default(now())
+
+  fields Field[]
+}
+
+model Field {
+  id       String  @id @default(cuid())
+  venueId  String
+  venue    Venue   @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  name     String
+  capacity Int     // supported total players (informational for MVP)
+  isActive Boolean @default(true)
+
+  events Event[]
+}
+
+// ---------- Events ----------
+model Event {
+  id             String      @id @default(cuid())
+  organizerId    String
+  organizer      User        @relation("EventOrganizer", fields: [organizerId], references: [id])
+  fieldId        String
+  field          Field       @relation(fields: [fieldId], references: [id])
+  startAt        DateTime
+  endAt          DateTime
+  numberOfTeams  Int
+  playersPerTeam Int
+  // capacity is derived: numberOfTeams * playersPerTeam (never stored)
+  status         EventStatus @default(UPCOMING)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  teams        Team[]
+  participants EventParticipant[]
+  invitations  Invitation[]
+  ratings      Rating[]
+
+  @@index([status, startAt])
+  @@index([fieldId, startAt])
+}
+
+model Team {
+  id      String @id @default(cuid())
+  eventId String
+  event   Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  name    String
+
+  participants EventParticipant[]
+
+  @@unique([eventId, name])
+}
+
+model EventParticipant {
+  id                String            @id @default(cuid())
+  eventId           String
+  event             Event             @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  userId            String
+  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status            ParticipantStatus @default(JOINED)
+  preferredPosition Position
+  teamId            String?
+  team              Team?             @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  joinedAt          DateTime          @default(now())
+
+  @@unique([eventId, userId]) // can't join the same event twice
+  @@index([userId])
+}
+
+model Invitation {
+  id            String           @id @default(cuid())
+  eventId       String
+  event         Event            @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  inviterId     String
+  inviter       User             @relation("InvitationInviter", fields: [inviterId], references: [id])
+  invitedUserId String
+  invitedUser   User             @relation("InvitationInvited", fields: [invitedUserId], references: [id])
+  status        InvitationStatus @default(PENDING)
+  createdAt     DateTime         @default(now())
+
+  @@unique([eventId, invitedUserId])
+  @@index([invitedUserId, status])
+}
+
+// One submission per (event, rater, ratee); scores all six skills 1..5. Immutable in MVP.
+model Rating {
+  id        String   @id @default(cuid())
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  raterId   String
+  rater     User     @relation("RatingRater", fields: [raterId], references: [id])
+  rateeId   String
+  ratee     User     @relation("RatingRatee", fields: [rateeId], references: [id])
+  pace      Int
+  dribbling Int
+  passing   Int
+  shooting  Int
+  defending Int
+  physical  Int
+  createdAt DateTime @default(now())
+
+  @@unique([eventId, raterId, rateeId])
+  @@index([rateeId])
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      NotificationType
+  payload   Json
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  @@index([userId, readAt])
+}
