@@ -1,5 +1,15 @@
 import { z } from 'zod';
-import { createEvent, eventCapacity, joinEvent, leaveEvent, DomainError } from '@app/domain';
+import {
+  createEvent,
+  eventCapacity,
+  joinEvent,
+  leaveEvent,
+  startEvent,
+  finishEvent,
+  cancelEvent,
+  assignTeam,
+  DomainError,
+} from '@app/domain';
 import { ParticipantStatus, Position, type Prisma } from '@app/db';
 import { router, publicProcedure, protectedProcedure, managerProcedure } from '../trpc.js';
 
@@ -115,5 +125,45 @@ export const eventsRouter = router({
     .mutation(async ({ ctx, input }) => {
       await leaveEvent(ctx.prisma, { eventId: input.eventId, userId: ctx.user.id });
       return { ok: true };
+    }),
+
+  // --- Organizer management (organizer identity enforced in the domain layer) ---
+  start: protectedProcedure
+    .input(z.object({ eventId: z.string().min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      const e = await startEvent(ctx.prisma, { eventId: input.eventId, organizerId: ctx.user.id });
+      return { id: e.id, status: e.status };
+    }),
+
+  finish: protectedProcedure
+    .input(z.object({ eventId: z.string().min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      const e = await finishEvent(ctx.prisma, { eventId: input.eventId, organizerId: ctx.user.id });
+      return { id: e.id, status: e.status };
+    }),
+
+  cancel: protectedProcedure
+    .input(z.object({ eventId: z.string().min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      const e = await cancelEvent(ctx.prisma, { eventId: input.eventId, organizerId: ctx.user.id });
+      return { id: e.id, status: e.status };
+    }),
+
+  assignTeam: protectedProcedure
+    .input(
+      z.object({
+        eventId: z.string().min(1),
+        userId: z.string().min(1),
+        teamId: z.string().min(1).nullable(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const p = await assignTeam(ctx.prisma, {
+        eventId: input.eventId,
+        organizerId: ctx.user.id,
+        userId: input.userId,
+        teamId: input.teamId,
+      });
+      return { participantId: p.id, teamId: p.teamId };
     }),
 });
