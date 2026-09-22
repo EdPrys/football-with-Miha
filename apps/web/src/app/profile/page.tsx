@@ -102,7 +102,10 @@ export default function ProfilePage() {
         <h2 className="mb-2 text-sm font-semibold text-muted-foreground">Історія матчів</h2>
         <div className="space-y-2">
           {(history.data ?? []).map((m) => (
-            <Card key={m.eventId} className="flex items-center justify-between p-3 text-sm">
+            <Card
+              key={m.eventId}
+              className="flex flex-row items-center justify-between p-3 text-sm"
+            >
               <div>
                 <div>{formatDate(m.date)}</div>
                 <div className="text-xs text-muted-foreground">

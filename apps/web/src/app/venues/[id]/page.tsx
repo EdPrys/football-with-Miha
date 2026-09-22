@@ -50,7 +50,7 @@ export default function VenuePage() {
         <div className="space-y-2">
           {venue.events.map((e) => (
             <Link key={e.id} href={`/events/${e.id}`} className="block">
-              <Card className="flex items-center justify-between p-3 transition-colors hover:border-primary/50">
+              <Card className="flex flex-row items-center justify-between p-3 transition-colors hover:border-primary/50">
                 <div>
                   <div className="flex items-center gap-1.5 text-sm font-medium">
                     <CalendarDays className="size-4 text-primary" />

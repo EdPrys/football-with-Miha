@@ -4,7 +4,6 @@ import { toast } from 'sonner';
 import { trpc } from '@/lib/trpc';
 import { RequireAdmin } from '@/components/require-admin';
 import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Select,
@@ -47,7 +46,7 @@ function UsersPageContent() {
         {users.data?.map((u) => {
           const self = u.id === me.data?.user.id;
           return (
-            <Card key={u.id} className="flex items-center justify-between gap-3 p-3">
+            <Card key={u.id} className="flex flex-row items-center justify-between gap-3 p-3">
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium">
                   {u.name} {self && <span className="text-muted-foreground">(ти)</span>}
@@ -55,7 +54,6 @@ function UsersPageContent() {
                 <p className="truncate text-xs text-muted-foreground">{u.email}</p>
               </div>
               <div className="flex shrink-0 items-center gap-2">
-                <Badge variant="outline">{ROLE_LABEL[u.role] ?? u.role}</Badge>
                 <Select
                   value={u.role}
                   onValueChange={(role) => role && setRole.mutate({ userId: u.id, role })}
