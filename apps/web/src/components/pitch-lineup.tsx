@@ -16,7 +16,14 @@ type Participant = {
 type Team = { id: string; name: string };
 
 const TEAM_RING = ['ring-emerald-300', 'ring-sky-300', 'ring-amber-300', 'ring-fuchsia-300'];
-const TEAM_TEXT = ['text-emerald-200', 'text-sky-200', 'text-amber-200', 'text-fuchsia-200'];
+// Used only for the carousel header label, which sits on the page background
+// (not the green pitch) — needs to hold contrast in light mode too.
+const TEAM_TEXT = [
+  'text-emerald-700 dark:text-emerald-300',
+  'text-sky-700 dark:text-sky-300',
+  'text-amber-700 dark:text-amber-300',
+  'text-fuchsia-700 dark:text-fuchsia-300',
+];
 const TEAM_DOT = ['bg-emerald-300', 'bg-sky-300', 'bg-amber-300', 'bg-fuchsia-300'];
 
 // GK nearest the goal (top), FWD nearest the halfway line (bottom of the half-pitch card).
