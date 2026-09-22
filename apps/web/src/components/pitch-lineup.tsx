@@ -102,7 +102,7 @@ export function PitchLineup({
                 disabled={joinPending}
                 onClick={() => onJoin(line, team.id)}
                 className="flex size-11 items-center justify-center rounded-full border-2 border-dashed border-white/60 text-white/80 transition hover:border-white hover:bg-white/10 disabled:opacity-50"
-                aria-label={`${team.name}: ${line}`}
+                aria-label={`${team.name}: ${line} ${i + 1}`}
               >
                 <Plus className="size-5" />
               </button>
