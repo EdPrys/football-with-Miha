@@ -12,4 +12,14 @@ export const usersRouter = router({
       });
       return { ok: true };
     }),
+
+  // Look a teammate up by email to invite them to an event.
+  findByEmail: protectedProcedure
+    .input(z.object({ email: z.string().email() }))
+    .query(async ({ ctx, input }) => {
+      return ctx.prisma.user.findUnique({
+        where: { email: input.email },
+        select: { id: true, name: true, avatarUrl: true },
+      });
+    }),
 });
