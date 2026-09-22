@@ -1,16 +1,14 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { CalendarDays, MapPin, Users, Star, UserPlus } from 'lucide-react';
+import { CalendarDays, MapPin, Users, Star } from 'lucide-react';
 import { toast } from 'sonner';
 import { trpc } from '@/lib/trpc';
 import { Card } from '@/components/ui/card';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -69,23 +67,6 @@ export default function EventPage() {
     onError: onErr,
   });
   const assign = trpc.events.assignTeam.useMutation({ onSuccess: refresh, onError: onErr });
-
-  const [inviteEmail, setInviteEmail] = useState('');
-  const invite = trpc.invitations.send.useMutation({
-    onSuccess: () => {
-      toast.success('Запрошення надіслано');
-      setInviteEmail('');
-    },
-    onError: onErr,
-  });
-
-  const sendInvite = async (formEvent: FormEvent) => {
-    formEvent.preventDefault();
-    if (!inviteEmail) return;
-    const found = await utils.users.findByEmail.fetch({ email: inviteEmail });
-    if (!found) return toast.error('Користувача з такою поштою не знайдено');
-    invite.mutate({ eventId: id, invitedUserId: found.id });
-  };
 
   if (ev.isLoading) return <Skeleton className="h-96 w-full rounded-xl" />;
   if (ev.error || !ev.data) return <Card className="p-8 text-center text-sm">Гру не знайдено</Card>;
@@ -157,24 +138,6 @@ export default function EventPage() {
                 </div>
               ))}
           </div>
-        </Card>
-      )}
-
-      {(isOrganizer || mine) && e.status === 'UPCOMING' && (
-        <Card className="space-y-2 p-4">
-          <p className="text-sm font-semibold text-muted-foreground">Запросити друга</p>
-          <form onSubmit={sendInvite} className="flex gap-2">
-            <Input
-              type="email"
-              placeholder="email гравця"
-              value={inviteEmail}
-              onChange={(evt) => setInviteEmail(evt.target.value)}
-              className="flex-1"
-            />
-            <Button type="submit" size="icon" disabled={invite.isPending} aria-label="Запросити">
-              <UserPlus className="size-4" />
-            </Button>
-          </form>
         </Card>
       )}
 

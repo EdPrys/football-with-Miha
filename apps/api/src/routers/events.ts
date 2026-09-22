@@ -12,6 +12,8 @@ import {
 } from '@app/domain';
 import { ParticipantStatus, Position, type Prisma } from '@app/db';
 import { router, publicProcedure, protectedProcedure, managerProcedure } from '../trpc.js';
+import { postToTelegram } from '../integrations/telegram.js';
+import { eventAnnouncementText } from '../integrations/event-announcement.js';
 
 // Participants that count toward a filled slot.
 const ACTIVE_STATUSES: ParticipantStatus[] = [ParticipantStatus.JOINED, ParticipantStatus.ATTENDED];
@@ -30,6 +32,13 @@ export const eventsRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       const event = await createEvent(ctx.prisma, { organizerId: ctx.user.id, ...input });
+
+      const field = await ctx.prisma.field.findUnique({
+        where: { id: input.fieldId },
+        include: { venue: true },
+      });
+      if (field) void postToTelegram(eventAnnouncementText(event, field));
+
       return { id: event.id };
     }),
 
