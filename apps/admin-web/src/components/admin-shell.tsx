@@ -8,6 +8,7 @@ import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import { trpc } from '@/lib/trpc';
 import { clearToken } from '@/lib/auth';
+import { Logo } from '@/components/logo';
 
 const tabs = [
   { href: '/venues', label: 'Майданчики', icon: MapPin },
@@ -46,8 +47,9 @@ export function AdminShell({ children }: { children: ReactNode }) {
     <div className="flex min-h-dvh flex-col">
       <header className="sticky top-0 z-20 border-b bg-background/80 backdrop-blur">
         <div className="mx-auto flex h-14 max-w-3xl items-center justify-between px-4">
-          <Link href="/venues" className="font-semibold tracking-tight">
-            ⚽ Football — Адмін
+          <Link href="/venues" className="flex items-center gap-2 font-semibold tracking-tight">
+            <Logo className="size-6 text-foreground" />
+            Football — Адмін
           </Link>
           {!isLogin && (
             <nav className="flex items-center gap-1">

@@ -7,6 +7,7 @@ import { useTheme } from 'next-themes';
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import { trpc } from '@/lib/trpc';
+import { Logo } from '@/components/logo';
 
 const tabs = [
   { href: '/', label: 'Пошук', icon: Compass },
@@ -43,8 +44,9 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="flex min-h-dvh flex-col">
       <header className="sticky top-0 z-20 border-b bg-background/80 backdrop-blur">
         <div className="mx-auto flex h-14 max-w-md items-center justify-between px-4">
-          <Link href="/" className="font-semibold tracking-tight">
-            ⚽ Football
+          <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight">
+            <Logo className="size-6 text-foreground" />
+            Football
           </Link>
           <ThemeToggle />
         </div>
