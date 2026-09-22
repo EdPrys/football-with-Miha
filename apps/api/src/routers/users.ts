@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { router, protectedProcedure } from '../trpc.js';
+import { Role } from '@app/db';
+import { router, protectedProcedure, adminProcedure } from '../trpc.js';
 
 export const usersRouter = router({
   // Set or clear your avatar (image URL). Upload-from-device is future work.
@@ -21,5 +22,21 @@ export const usersRouter = router({
         where: { email: input.email },
         select: { id: true, name: true, avatarUrl: true },
       });
+    }),
+
+  // Admin: the full user directory, for role management.
+  list: adminProcedure.query(async ({ ctx }) => {
+    return ctx.prisma.user.findMany({
+      orderBy: { createdAt: 'desc' },
+      select: { id: true, name: true, email: true, role: true, createdAt: true },
+    });
+  }),
+
+  // Admin: promote/demote a user. PLAYER < MANAGER < ADMIN.
+  setRole: adminProcedure
+    .input(z.object({ userId: z.string().min(1), role: z.nativeEnum(Role) }))
+    .mutation(async ({ ctx, input }) => {
+      await ctx.prisma.user.update({ where: { id: input.userId }, data: { role: input.role } });
+      return { ok: true };
     }),
 });

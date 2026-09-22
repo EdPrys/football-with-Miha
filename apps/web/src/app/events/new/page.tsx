@@ -99,7 +99,12 @@ export default function NewEventPage() {
             <Label>Поле</Label>
             <Select value={fieldId} onValueChange={(v) => setFieldId(v ?? '')}>
               <SelectTrigger>
-                <SelectValue placeholder="Оберіть поле" />
+                <SelectValue placeholder="Оберіть поле">
+                  {(id: string) => {
+                    const f = fields.find((x) => x.id === id);
+                    return f ? `${f.venue} · ${f.name}` : null;
+                  }}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {fields.map((f) => (
@@ -167,7 +172,14 @@ export default function NewEventPage() {
               <Label>Формація (захист-півзахист-напад)</Label>
               <Select value={formation} onValueChange={(v) => v && setFormation(v)}>
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue>
+                    {(key: string) => {
+                      const o = formationOptions.find((x) => x.key === key);
+                      return o
+                        ? `${o.key} · воротар + ${o.slots.DEF}-${o.slots.MID}-${o.slots.FWD}`
+                        : key;
+                    }}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {formationOptions.map((o) => (

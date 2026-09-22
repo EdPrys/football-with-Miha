@@ -38,7 +38,7 @@ Single `User.role` enum, ordered `PLAYER < MANAGER < ADMIN` (higher inherits low
 
 Enforce in `apps/api/src/trpc.ts` via `protectedProcedure` / `managerProcedure` / `adminProcedure` (built on `roleAtLeast` from `@app/domain`). `events.create` = manager+, venue/field creation = admin.
 
-Planned frontends: `apps/web` (players), `apps/admin-web` (admin — user mgmt + venue/field CRUD, future), React Native mobile (future).
+Frontends: `apps/web` (players), `apps/admin-web` (admin — user role mgmt + venue/field CRUD), React Native mobile (future).
 
 ## Package names
 
