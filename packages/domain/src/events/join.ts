@@ -10,6 +10,13 @@ import { eventCapacity } from './capacity.js';
 
 const ACTIVE_STATUSES: ParticipantStatus[] = ['JOINED', 'ATTENDED'];
 
+interface LockedEvent {
+  id: string;
+  status: EventStatus;
+  numberOfTeams: number;
+  playersPerTeam: number;
+}
+
 export interface JoinGuardContext {
   status: EventStatus;
   capacity: number;
@@ -41,13 +48,19 @@ export interface JoinInput {
  * Join an event atomically. When a teamId is given (picking a slot on the pitch)
  * we also validate the team belongs to the event and isn't already full.
  * A user who previously left re-activates their existing row.
+ *
+ * `SELECT ... FOR UPDATE` locks the event row for the transaction's
+ * duration, serializing concurrent joins to the same event. Without it,
+ * two requests racing for the last slot would both read the same
+ * capacity/team-full COUNT under Postgres's default Read Committed
+ * isolation and both pass — overbooking the event or a team.
  */
 export async function joinEvent(prisma: PrismaClient, input: JoinInput): Promise<EventParticipant> {
   return prisma.$transaction(async (tx) => {
-    const event = await tx.event.findUnique({
-      where: { id: input.eventId },
-      select: { status: true, numberOfTeams: true, playersPerTeam: true },
-    });
+    const [event] = await tx.$queryRaw<LockedEvent[]>`
+      SELECT id, status, "numberOfTeams", "playersPerTeam"
+      FROM "Event" WHERE id = ${input.eventId} FOR UPDATE
+    `;
     if (!event) throw new DomainError('NOT_FOUND', 'Event not found');
 
     if (input.teamId != null) {
