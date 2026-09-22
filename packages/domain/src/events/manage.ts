@@ -1,4 +1,4 @@
-import type { Event, EventParticipant, ParticipantStatus, PrismaClient } from '@app/db';
+import type { Event, ParticipantStatus, PrismaClient } from '@app/db';
 import { DomainError } from '../errors.js';
 import { assertTransition } from './lifecycle.js';
 import { notifyMany } from '../notifications/create.js';
@@ -78,35 +78,4 @@ export async function cancelEvent(prisma: PrismaClient, input: ManageInput): Pro
   );
 
   return updated;
-}
-
-export interface AssignTeamInput extends ManageInput {
-  userId: string;
-  teamId: string | null;
-}
-
-export async function assignTeam(
-  prisma: PrismaClient,
-  input: AssignTeamInput,
-): Promise<EventParticipant> {
-  await loadOwnedEvent(prisma, input.eventId, input.organizerId);
-
-  if (input.teamId !== null) {
-    const team = await prisma.team.findFirst({
-      where: { id: input.teamId, eventId: input.eventId },
-    });
-    if (!team) throw new DomainError('VALIDATION', 'Team does not belong to this event');
-  }
-
-  const participant = await prisma.eventParticipant.findUnique({
-    where: { eventId_userId: { eventId: input.eventId, userId: input.userId } },
-  });
-  if (!participant || !ACTIVE_STATUSES.includes(participant.status)) {
-    throw new DomainError('NOT_FOUND', 'User is not an active participant of this event');
-  }
-
-  return prisma.eventParticipant.update({
-    where: { id: participant.id },
-    data: { teamId: input.teamId },
-  });
 }

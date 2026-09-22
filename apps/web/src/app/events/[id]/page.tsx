@@ -9,13 +9,6 @@ import { Card } from '@/components/ui/card';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { PitchLineup } from '@/components/pitch-lineup';
 import { PlayerAvatar } from '@/components/player-avatar';
@@ -66,8 +59,6 @@ export default function EventPage() {
     },
     onError: onErr,
   });
-  const assign = trpc.events.assignTeam.useMutation({ onSuccess: refresh, onError: onErr });
-
   if (ev.isLoading) return <Skeleton className="h-96 w-full rounded-xl" />;
   if (ev.error || !ev.data) return <Card className="p-8 text-center text-sm">Гру не знайдено</Card>;
 
@@ -184,38 +175,6 @@ export default function EventPage() {
               Скасувати
             </Button>
           </div>
-        </Card>
-      )}
-
-      {/* Organizer team assignment */}
-      {isOrganizer && e.status !== 'CANCELLED' && e.participants.length > 0 && (
-        <Card className="space-y-2 p-4">
-          <p className="text-sm font-semibold text-muted-foreground">Команди</p>
-          {e.participants.map((p) => (
-            <div key={p.id} className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <PlayerAvatar name={p.user.name} url={p.user.avatarUrl} className="size-7" />
-                <span className="text-sm">{p.user.name}</span>
-              </div>
-              <Select
-                value={p.teamId ?? ''}
-                onValueChange={(v) =>
-                  assign.mutate({ eventId: e.id, userId: p.user.id, teamId: v || null })
-                }
-              >
-                <SelectTrigger className="h-8 w-28 text-xs">
-                  <SelectValue placeholder="Команда" />
-                </SelectTrigger>
-                <SelectContent>
-                  {e.teams.map((t) => (
-                    <SelectItem key={t.id} value={t.id}>
-                      {t.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          ))}
         </Card>
       )}
     </div>

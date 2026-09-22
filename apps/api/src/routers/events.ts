@@ -7,7 +7,6 @@ import {
   startEvent,
   finishEvent,
   cancelEvent,
-  assignTeam,
   DomainError,
 } from '@app/domain';
 import { ParticipantStatus, Position, type Prisma } from '@app/db';
@@ -198,23 +197,5 @@ export const eventsRouter = router({
     .mutation(async ({ ctx, input }) => {
       const e = await cancelEvent(ctx.prisma, { eventId: input.eventId, organizerId: ctx.user.id });
       return { id: e.id, status: e.status };
-    }),
-
-  assignTeam: protectedProcedure
-    .input(
-      z.object({
-        eventId: z.string().min(1),
-        userId: z.string().min(1),
-        teamId: z.string().min(1).nullable(),
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      const p = await assignTeam(ctx.prisma, {
-        eventId: input.eventId,
-        organizerId: ctx.user.id,
-        userId: input.userId,
-        teamId: input.teamId,
-      });
-      return { participantId: p.id, teamId: p.teamId };
     }),
 });
