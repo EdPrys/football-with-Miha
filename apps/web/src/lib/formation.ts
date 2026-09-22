@@ -3,22 +3,50 @@
 export type LinePosition = 'GK' | 'DEF' | 'MID' | 'FWD';
 export type Formation = Record<LinePosition, number>;
 
-const MAP: Record<number, Formation> = {
-  1: { GK: 1, DEF: 0, MID: 0, FWD: 0 },
-  2: { GK: 1, DEF: 0, MID: 1, FWD: 0 },
-  3: { GK: 1, DEF: 1, MID: 0, FWD: 1 },
-  4: { GK: 1, DEF: 1, MID: 1, FWD: 1 },
-  5: { GK: 1, DEF: 2, MID: 1, FWD: 1 },
-  6: { GK: 1, DEF: 1, MID: 2, FWD: 2 }, // 1-2-2
-  7: { GK: 1, DEF: 2, MID: 2, FWD: 2 },
+export interface FormationOption {
+  key: string;
+  slots: Formation;
+}
+
+const slots = (def: number, mid: number, fwd: number): Formation => ({
+  GK: 1,
+  DEF: def,
+  MID: mid,
+  FWD: fwd,
+});
+const option = (def: number, mid: number, fwd: number): FormationOption => ({
+  key: `${def}-${mid}-${fwd}`,
+  slots: slots(def, mid, fwd),
+});
+
+const CATALOG: Record<number, FormationOption[]> = {
+  1: [option(0, 0, 0)],
+  2: [option(0, 1, 0)],
+  3: [option(1, 0, 1), option(1, 1, 0), option(0, 1, 1)],
+  4: [option(1, 1, 1), option(2, 0, 1), option(1, 0, 2)],
+  5: [option(2, 1, 1), option(1, 2, 1), option(1, 1, 2)],
+  6: [option(1, 2, 2), option(2, 2, 1), option(2, 1, 2)],
+  7: [option(2, 2, 2), option(3, 2, 1), option(2, 3, 1)],
 };
 
-export function formationFor(playersPerTeam: number): Formation {
-  const known = MAP[playersPerTeam];
-  if (known) return known;
+function generatedOption(playersPerTeam: number): FormationOption {
   const out = Math.max(0, playersPerTeam - 1);
   const def = Math.ceil(out / 3);
   const mid = Math.ceil((out - def) / 2);
   const fwd = out - def - mid;
-  return { GK: 1, DEF: def, MID: mid, FWD: fwd };
+  return option(def, mid, fwd);
+}
+
+export function formationOptionsFor(playersPerTeam: number): FormationOption[] {
+  return CATALOG[playersPerTeam] ?? [generatedOption(playersPerTeam)];
+}
+
+export function defaultFormationKey(playersPerTeam: number): string {
+  return formationOptionsFor(playersPerTeam)[0].key;
+}
+
+export function formationFor(playersPerTeam: number, formationKey?: string | null): Formation {
+  const options = formationOptionsFor(playersPerTeam);
+  const match = formationKey ? options.find((o) => o.key === formationKey) : undefined;
+  return (match ?? options[0]).slots;
 }

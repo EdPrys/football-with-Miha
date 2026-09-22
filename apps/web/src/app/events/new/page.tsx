@@ -1,10 +1,11 @@
 'use client';
 
-import { useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { trpc } from '@/lib/trpc';
+import { formationOptionsFor } from '@/lib/formation';
 import { Card } from '@/components/ui/card';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -30,6 +31,19 @@ export default function NewEventPage() {
   const [endTime, setEndTime] = useState('22:00');
   const [numberOfTeams, setNumberOfTeams] = useState('2');
   const [playersPerTeam, setPlayersPerTeam] = useState('5');
+  const [formation, setFormation] = useState(formationOptionsFor(5)[0].key);
+
+  const formationOptions = useMemo(
+    () => formationOptionsFor(Number(playersPerTeam) || 1),
+    [playersPerTeam],
+  );
+
+  // Reset formation to the default whenever it no longer belongs to the current team size.
+  useEffect(() => {
+    if (!formationOptions.some((o) => o.key === formation)) {
+      setFormation(formationOptions[0].key);
+    }
+  }, [formationOptions, formation]);
 
   const create = trpc.events.create.useMutation({
     onSuccess: (d) => {
@@ -72,6 +86,7 @@ export default function NewEventPage() {
       endAt,
       numberOfTeams: Number(numberOfTeams),
       playersPerTeam: Number(playersPerTeam),
+      formation,
     });
   };
 
@@ -147,6 +162,23 @@ export default function NewEventPage() {
               />
             </div>
           </div>
+          {formationOptions.length > 1 && (
+            <div className="space-y-1.5">
+              <Label>Формація (захист-півзахист-напад)</Label>
+              <Select value={formation} onValueChange={(v) => v && setFormation(v)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {formationOptions.map((o) => (
+                    <SelectItem key={o.key} value={o.key}>
+                      {o.key} · воротар + {o.slots.DEF}-{o.slots.MID}-{o.slots.FWD}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <Button type="submit" className="w-full" disabled={create.isPending}>
             {create.isPending ? '...' : 'Створити'}
           </Button>

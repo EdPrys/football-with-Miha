@@ -116,7 +116,7 @@ export default function EventPage() {
       <PitchLineup
         participants={e.participants}
         teams={e.teams}
-        formation={formationFor(e.playersPerTeam)}
+        formation={formationFor(e.playersPerTeam, e.formation)}
         playersPerTeam={e.playersPerTeam}
         meId={userId}
         canJoinBase={canJoin}

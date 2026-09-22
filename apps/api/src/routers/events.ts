@@ -25,6 +25,7 @@ export const eventsRouter = router({
         endAt: z.date(),
         numberOfTeams: z.number().int().min(2),
         playersPerTeam: z.number().int().min(1),
+        formation: z.string().min(1).optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {

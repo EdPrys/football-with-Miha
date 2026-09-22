@@ -1,6 +1,7 @@
 import type { Event, PrismaClient } from '@app/db';
 import { DomainError } from '../errors.js';
 import { teamNames } from './team-names.js';
+import { defaultFormationKey, isValidFormationKey } from './formation.js';
 
 export interface CreateEventInput {
   organizerId: string;
@@ -9,6 +10,8 @@ export interface CreateEventInput {
   endAt: Date;
   numberOfTeams: number;
   playersPerTeam: number;
+  /** Formation key from formationOptionsFor(playersPerTeam); defaults to that size's default formation. */
+  formation?: string;
 }
 
 export const MIN_TEAMS = 2;
@@ -31,6 +34,9 @@ export async function createEvent(prisma: PrismaClient, input: CreateEventInput)
   if (input.startAt.getTime() < Date.now()) {
     throw new DomainError('VALIDATION', 'startAt must be in the future');
   }
+  if (input.formation && !isValidFormationKey(input.playersPerTeam, input.formation)) {
+    throw new DomainError('VALIDATION', 'Invalid formation for this team size');
+  }
 
   const field = await prisma.field.findUnique({ where: { id: input.fieldId } });
   if (!field) throw new DomainError('NOT_FOUND', 'Field not found');
@@ -44,6 +50,7 @@ export async function createEvent(prisma: PrismaClient, input: CreateEventInput)
       endAt: input.endAt,
       numberOfTeams: input.numberOfTeams,
       playersPerTeam: input.playersPerTeam,
+      formation: input.formation ?? defaultFormationKey(input.playersPerTeam),
       teams: { create: teamNames(input.numberOfTeams).map((name) => ({ name })) },
     },
   });

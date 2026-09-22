@@ -142,6 +142,8 @@ model Event {
   numberOfTeams  Int
   playersPerTeam Int
   // capacity is derived: numberOfTeams * playersPerTeam (never stored)
+  // "DEF-MID-FWD" key from formationOptionsFor(playersPerTeam); GK is always 1 and implicit.
+  formation      String?
   status         EventStatus @default(UPCOMING)
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
