@@ -28,13 +28,16 @@ All four services run in one Railway project, deployed from Dockerfiles
 | `web`       | `apps/web/Dockerfile`       | https://web-production-273dc.up.railway.app      |
 | `admin-web` | `apps/admin-web/Dockerfile` | https://admin-web-production-ba29.up.railway.app |
 
-Redeploy after changes (CLI: `npm i -g @railway/cli`, `railway login`, `railway link`):
+**Auto-deploy:** every service is connected to GitHub `EdPrys/football-with-Miha`
+(`main`). A push redeploys only the services whose watch paths changed:
 
-```bash
-railway up --service api --detach
-railway up --service web --detach        # NEXT_PUBLIC_API_URL is baked in at build time
-railway up --service admin-web --detach
-```
+- `api` — `apps/api/**` + shared (`packages/**`, root `package.json`, lockfile, workspace, `tsconfig.base.json`, `.dockerignore`)
+- `web` — `apps/web/**`, `apps/api/**` + shared
+- `admin-web` — `apps/admin-web/**`, `apps/api/**` + shared
+
+Docs-only pushes deploy nothing. Manual deploy from local (CLI: `npm i -g @railway/cli`,
+`railway login`, `railway link`): `railway up --service <api|web|admin-web> --detach`.
+`NEXT_PUBLIC_API_URL` is baked into web/admin at build time.
 
 API env: `DATABASE_URL=${{Postgres.DATABASE_URL}}`, `JWT_SECRET`, `PORT=4000`,
 `WEB_ORIGIN` (web + admin URLs), `APP_URL` (web URL, used in Telegram posts),
