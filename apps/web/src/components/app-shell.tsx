@@ -31,6 +31,14 @@ function ThemeToggle() {
   );
 }
 
+function UnreadBadge({ count }: { count: number }) {
+  return (
+    <span className="absolute -right-1 -top-1 flex size-3.5 items-center justify-center rounded-full bg-red-500 text-[9px] font-semibold text-white">
+      {count > 9 ? '9+' : count}
+    </span>
+  );
+}
+
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const me = trpc.auth.me.useQuery(undefined, { retry: false });
@@ -39,25 +47,57 @@ export function AppShell({ children }: { children: ReactNode }) {
     refetchInterval: 30_000,
   });
   const unreadCount = mine.data?.unreadCount ?? 0;
+  const isActive = (href: string) => (href === '/' ? pathname === '/' : pathname.startsWith(href));
 
   return (
     <div className="flex min-h-dvh flex-col">
       <header className="sticky top-0 z-20 border-b bg-background/80 backdrop-blur">
-        <div className="mx-auto flex h-14 max-w-md items-center justify-between px-4">
+        <div className="mx-auto flex h-14 max-w-md items-center justify-between px-4 md:h-16 md:max-w-6xl md:px-6">
           <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight">
             <Logo className="size-6 text-foreground" />
             Football
           </Link>
+
+          {/* Desktop nav — the bottom tab bar takes over below md */}
+          <nav className="hidden items-center gap-1 md:flex">
+            {tabs.map((t) => {
+              const active = isActive(t.href);
+              const Icon = t.icon;
+              return (
+                <Link
+                  key={t.href}
+                  href={t.href}
+                  className={cn(
+                    'flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                    active
+                      ? 'bg-primary/10 text-primary'
+                      : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                  )}
+                >
+                  <span className="relative">
+                    <Icon className="size-4" />
+                    {t.href === '/notifications' && unreadCount > 0 && (
+                      <UnreadBadge count={unreadCount} />
+                    )}
+                  </span>
+                  {t.label}
+                </Link>
+              );
+            })}
+          </nav>
+
           <ThemeToggle />
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-md flex-1 px-4 pb-24 pt-4">{children}</main>
+      <main className="mx-auto w-full max-w-md flex-1 px-4 pb-24 pt-4 md:max-w-6xl md:px-6 md:pb-12 md:pt-8">
+        {children}
+      </main>
 
-      <nav className="fixed inset-x-0 bottom-0 z-20 border-t bg-background">
+      <nav className="fixed inset-x-0 bottom-0 z-20 border-t bg-background md:hidden">
         <div className="mx-auto grid max-w-md grid-cols-5">
           {tabs.map((t) => {
-            const active = t.href === '/' ? pathname === '/' : pathname.startsWith(t.href);
+            const active = isActive(t.href);
             const Icon = t.icon;
             return (
               <Link
@@ -71,9 +111,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <span className="relative">
                   <Icon className="size-5" />
                   {t.href === '/notifications' && unreadCount > 0 && (
-                    <span className="absolute -right-1 -top-1 flex size-3.5 items-center justify-center rounded-full bg-red-500 text-[9px] font-semibold text-white">
-                      {unreadCount > 9 ? '9+' : unreadCount}
-                    </span>
+                    <UnreadBadge count={unreadCount} />
                   )}
                 </span>
                 {t.label}

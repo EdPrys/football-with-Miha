@@ -39,7 +39,7 @@ export default function ProfilePage() {
 
   if (me.error || !me.data) {
     return (
-      <Card className="space-y-4 p-8 text-center">
+      <Card className="mx-auto max-w-md space-y-4 p-8 text-center">
         <p className="text-sm text-muted-foreground">Увійди, щоб побачити свій профіль.</p>
         <Link href="/login" className={cn(buttonVariants(), 'w-full')}>
           Увійти
@@ -56,12 +56,12 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 md:space-y-8">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <AvatarEditor name={me.data.user.name} url={me.data.user.avatarUrl} />
           <div>
-            <h1 className="text-2xl font-bold">{me.data.user.name}</h1>
+            <h1 className="text-2xl font-bold md:text-3xl">{me.data.user.name}</h1>
             <Badge variant="secondary" className="mt-1">
               {me.data.user.role}
             </Badge>
@@ -72,52 +72,56 @@ export default function ProfilePage() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-3 gap-3">
-        <Stat label="Матчі" value={p ? String(p.matchesPlayed) : '—'} />
-        <Stat label="Відвідуваність" value={p?.attendance != null ? `${p.attendance}%` : '—'} />
-        <Stat label="Оцінок" value={p ? String(p.totalRatings) : '—'} />
-      </div>
+      <div className="grid gap-5 lg:grid-cols-2 lg:items-start lg:gap-8">
+        <div className="space-y-5">
+          <div className="grid grid-cols-3 gap-3">
+            <Stat label="Матчі" value={p ? String(p.matchesPlayed) : '—'} />
+            <Stat label="Відвідуваність" value={p?.attendance != null ? `${p.attendance}%` : '—'} />
+            <Stat label="Оцінок" value={p ? String(p.totalRatings) : '—'} />
+          </div>
 
-      <Card className="p-5">
-        <h2 className="mb-4 text-sm font-semibold text-muted-foreground">Навички</h2>
-        <div className="space-y-3">
-          {(p?.skills ?? []).map((s) => (
-            <div key={s.skill} className="space-y-1">
-              <div className="flex items-center justify-between text-sm">
-                <span>{SKILL_LABEL[s.skill] ?? s.skill}</span>
-                <span className="font-medium tabular-nums">{s.value.toFixed(1)}</span>
-              </div>
-              <div className="h-2 overflow-hidden rounded-full bg-muted">
-                <div
-                  className="h-full rounded-full bg-primary transition-all"
-                  style={{ width: `${(s.value / 5) * 100}%` }}
-                />
-              </div>
-            </div>
-          ))}
-        </div>
-      </Card>
-
-      <div>
-        <h2 className="mb-2 text-sm font-semibold text-muted-foreground">Історія матчів</h2>
-        <div className="space-y-2">
-          {(history.data ?? []).map((m) => (
-            <Card
-              key={m.eventId}
-              className="flex flex-row items-center justify-between p-3 text-sm"
-            >
-              <div>
-                <div>{formatDate(m.date)}</div>
-                <div className="text-xs text-muted-foreground">
-                  {m.venue} · {m.field}
+          <Card className="p-5">
+            <h2 className="mb-4 text-sm font-semibold text-muted-foreground">Навички</h2>
+            <div className="space-y-3">
+              {(p?.skills ?? []).map((s) => (
+                <div key={s.skill} className="space-y-1">
+                  <div className="flex items-center justify-between text-sm">
+                    <span>{SKILL_LABEL[s.skill] ?? s.skill}</span>
+                    <span className="font-medium tabular-nums">{s.value.toFixed(1)}</span>
+                  </div>
+                  <div className="h-2 overflow-hidden rounded-full bg-muted">
+                    <div
+                      className="h-full rounded-full bg-primary transition-all"
+                      style={{ width: `${(s.value / 5) * 100}%` }}
+                    />
+                  </div>
                 </div>
-              </div>
-              <Badge variant="secondary">{m.team ?? m.position}</Badge>
-            </Card>
-          ))}
-          {history.data && history.data.length === 0 && (
-            <p className="text-sm text-muted-foreground">Ще немає зіграних матчів.</p>
-          )}
+              ))}
+            </div>
+          </Card>
+        </div>
+
+        <div>
+          <h2 className="mb-2 text-sm font-semibold text-muted-foreground">Історія матчів</h2>
+          <div className="space-y-2">
+            {(history.data ?? []).map((m) => (
+              <Card
+                key={m.eventId}
+                className="flex flex-row items-center justify-between p-3 text-sm"
+              >
+                <div>
+                  <div>{formatDate(m.date)}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {m.venue} · {m.field}
+                  </div>
+                </div>
+                <Badge variant="secondary">{m.team ?? m.position}</Badge>
+              </Card>
+            ))}
+            {history.data && history.data.length === 0 && (
+              <p className="text-sm text-muted-foreground">Ще немає зіграних матчів.</p>
+            )}
+          </div>
         </div>
       </div>
     </div>

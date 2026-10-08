@@ -61,7 +61,7 @@ export default function NewEventPage() {
   if (me.isLoading) return <Skeleton className="h-40 w-full rounded-xl" />;
   if (!me.data)
     return (
-      <Card className="space-y-4 p-8 text-center">
+      <Card className="mx-auto max-w-md space-y-4 p-8 text-center">
         <p className="text-sm text-muted-foreground">Увійди, щоб створювати ігри.</p>
         <Link href="/login" className={cn(buttonVariants(), 'w-full')}>
           Увійти
@@ -70,7 +70,7 @@ export default function NewEventPage() {
     );
   if (me.data.user.role === 'PLAYER')
     return (
-      <Card className="p-8 text-center text-sm text-muted-foreground">
+      <Card className="mx-auto max-w-md p-8 text-center text-sm text-muted-foreground">
         Тільки менеджери можуть створювати ігри.
       </Card>
     );
@@ -91,7 +91,7 @@ export default function NewEventPage() {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="mx-auto w-full max-w-xl space-y-4">
       <h1 className="text-2xl font-bold">Створити гру</h1>
       <Card className="p-5">
         <form onSubmit={submit} className="space-y-4">

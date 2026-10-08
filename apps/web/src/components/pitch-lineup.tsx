@@ -136,7 +136,8 @@ export function PitchLineup({
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between px-1">
+      {/* Carousel controls — on desktop all halves are shown side by side instead */}
+      <div className="flex items-center justify-between px-1 lg:hidden">
         <button
           type="button"
           onClick={() => scrollToIndex(Math.max(0, active - 1))}
@@ -185,11 +186,19 @@ export function PitchLineup({
 
       <div
         ref={scrollRef}
-        className="flex snap-x snap-mandatory overflow-x-auto rounded-2xl scroll-smooth [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="flex snap-x snap-mandatory overflow-x-auto rounded-2xl scroll-smooth lg:grid lg:grid-cols-2 lg:gap-4 lg:overflow-visible lg:rounded-none [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         {teams.map((team, ti) => (
-          <div key={team.id} className="w-full shrink-0 snap-center">
-            <div className="relative min-h-[26rem] overflow-hidden bg-gradient-to-b from-emerald-600 to-emerald-800 px-4 pb-10 pt-6 shadow-inner">
+          <div key={team.id} className="w-full shrink-0 snap-center lg:w-auto lg:space-y-2">
+            <div
+              className={cn(
+                'hidden px-1 text-xs font-semibold uppercase tracking-wider lg:block',
+                TEAM_TEXT[ti % TEAM_TEXT.length],
+              )}
+            >
+              {team.name}
+            </div>
+            <div className="relative flex min-h-[26rem] flex-col overflow-hidden lg:min-h-[30rem] lg:rounded-2xl bg-gradient-to-b from-emerald-600 to-emerald-800 px-4 pb-10 pt-6 shadow-inner">
               {/* half-pitch boundary: goal end at top, halfway line at the bottom edge */}
               <div className="pointer-events-none absolute inset-x-3 top-3 bottom-3 rounded-t-lg border-2 border-white/25" />
               {/* centre-circle arc bulging up from the halfway line */}
@@ -199,7 +208,7 @@ export function PitchLineup({
                 className="pointer-events-none absolute left-1/2 top-3 h-4 w-16 -translate-x-1/2 rounded-t-sm border-2 border-b-0 border-white/70"
                 style={net}
               />
-              <div className="relative flex h-full flex-col justify-evenly gap-3 pt-3">
+              <div className="relative flex flex-1 flex-col justify-evenly gap-3 pt-3">
                 {ORDER.map((line) => (
                   <Slot key={line} line={line} team={team} ti={ti} />
                 ))}

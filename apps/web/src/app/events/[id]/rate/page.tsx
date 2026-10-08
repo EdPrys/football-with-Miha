@@ -40,7 +40,7 @@ export default function RatePage() {
 
   if (!me.data)
     return (
-      <Card className="space-y-4 p-8 text-center">
+      <Card className="mx-auto max-w-md space-y-4 p-8 text-center">
         <p className="text-sm text-muted-foreground">Увійди, щоб оцінювати гравців.</p>
         <Link href="/login" className={cn(buttonVariants(), 'w-full')}>
           Увійти
@@ -53,7 +53,7 @@ export default function RatePage() {
 
   if (!current)
     return (
-      <Card className="space-y-4 p-8 text-center">
+      <Card className="mx-auto max-w-md space-y-4 p-8 text-center">
         <p className="text-sm">🎉 Ти оцінив усіх, з ким грав. Дякуємо!</p>
         <Link
           href={`/events/${id}`}
@@ -65,7 +65,7 @@ export default function RatePage() {
     );
 
   return (
-    <div className="space-y-4">
+    <div className="mx-auto w-full max-w-xl space-y-4">
       <div>
         <h1 className="text-2xl font-bold">Оцінити гравців</h1>
         <p className="text-sm text-muted-foreground">Залишилось: {list.length}</p>

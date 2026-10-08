@@ -45,7 +45,7 @@ export default function NotificationsPage() {
   if (me.isLoading) return <Skeleton className="h-40 w-full rounded-xl" />;
   if (!me.data)
     return (
-      <Card className="space-y-4 p-8 text-center">
+      <Card className="mx-auto max-w-md space-y-4 p-8 text-center">
         <p className="text-sm text-muted-foreground">Увійди, щоб бачити сповіщення.</p>
         <Link href="/login" className={cn(buttonVariants(), 'w-full')}>
           Увійти
@@ -56,7 +56,7 @@ export default function NotificationsPage() {
   const notifications = list.data?.notifications ?? [];
 
   return (
-    <div className="space-y-4">
+    <div className="mx-auto w-full max-w-xl space-y-4">
       <h1 className="text-2xl font-bold">Сповіщення</h1>
       {list.isLoading && <Skeleton className="h-24 w-full rounded-xl" />}
       {list.data && notifications.length === 0 && (

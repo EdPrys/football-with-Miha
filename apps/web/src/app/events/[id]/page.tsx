@@ -70,113 +70,125 @@ export default function EventPage() {
   const canRate = e.status === 'FINISHED' && mine?.status === 'ATTENDED';
   const canJoin = e.status === 'UPCOMING' && !mine && !full;
 
+  // Mobile: one column in the original order (aside is `display: contents`, so its
+  // children flow into the outer flex and `order-*` interleaves them with the pitch).
+  // Desktop: details/controls in a sticky left column, the pitch on the right.
   return (
-    <div className="space-y-4">
-      <Card className="space-y-3 p-5">
-        <div className="flex items-center gap-2 text-sm font-medium">
-          <CalendarDays className="size-4 text-primary" />
-          {formatDate(e.startAt)} · {formatRange(e.startAt, e.endAt)}
-        </div>
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <MapPin className="size-4" />
-          <Link href={`/venues/${e.field.venue.id}`} className="underline-offset-2 hover:underline">
-            {e.field.venue.name}
-          </Link>
-          , {e.field.venue.city} · {e.field.name}
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Badge variant="secondary">
-            {e.playersPerTeam} на {e.playersPerTeam}
-          </Badge>
-          <Badge variant={full ? 'secondary' : 'default'}>
-            <Users className="mr-1 size-3" />
-            {e.joinedCount}/{e.capacity}
-          </Badge>
-          <Badge variant="outline">{e.status}</Badge>
-        </div>
-        <p className="text-xs text-muted-foreground">Організатор: {e.organizer.name}</p>
-      </Card>
+    <div className="flex flex-col gap-4 lg:grid lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)] lg:items-start lg:gap-8">
+      <aside className="contents lg:sticky lg:top-24 lg:flex lg:flex-col lg:gap-4">
+        <Card className="order-1 space-y-3 p-5">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <CalendarDays className="size-4 text-primary" />
+            {formatDate(e.startAt)} · {formatRange(e.startAt, e.endAt)}
+          </div>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <MapPin className="size-4 shrink-0" />
+            <span>
+              <Link
+                href={`/venues/${e.field.venue.id}`}
+                className="underline-offset-2 hover:underline"
+              >
+                {e.field.venue.name}
+              </Link>
+              , {e.field.venue.city} · {e.field.name}
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Badge variant="secondary">
+              {e.playersPerTeam} на {e.playersPerTeam}
+            </Badge>
+            <Badge variant={full ? 'secondary' : 'default'}>
+              <Users className="mr-1 size-3" />
+              {e.joinedCount}/{e.capacity}
+            </Badge>
+            <Badge variant="outline">{e.status}</Badge>
+          </div>
+          <p className="text-xs text-muted-foreground">Організатор: {e.organizer.name}</p>
+        </Card>
 
-      {canRate && (
-        <Link href={`/events/${e.id}/rate`} className={cn(buttonVariants(), 'w-full')}>
-          <Star className="mr-1 size-4" /> Оцінити гравців
-        </Link>
-      )}
+        {canRate && (
+          <Link href={`/events/${e.id}/rate`} className={cn(buttonVariants(), 'order-2 w-full')}>
+            <Star className="mr-1 size-4" /> Оцінити гравців
+          </Link>
+        )}
+
+        {e.participants.some((p) => !p.teamId) && (
+          <Card className="order-4 space-y-2 p-3">
+            <p className="text-xs font-medium text-muted-foreground">Очікують команду</p>
+            <div className="flex flex-wrap gap-3">
+              {e.participants
+                .filter((p) => !p.teamId)
+                .map((p) => (
+                  <div key={p.id} className="flex w-16 flex-col items-center gap-1">
+                    <PlayerAvatar name={p.user.name} url={p.user.avatarUrl} className="size-10" />
+                    <span className="max-w-16 truncate text-[11px]">{p.user.name}</span>
+                  </div>
+                ))}
+            </div>
+          </Card>
+        )}
+
+        {mine && e.status === 'UPCOMING' && (
+          <Button
+            variant="outline"
+            className="order-5 w-full"
+            disabled={leave.isPending}
+            onClick={() => leave.mutate({ eventId: e.id })}
+          >
+            Вийти з гри ({POSITION_LABEL[mine.preferredPosition as PositionValue]})
+          </Button>
+        )}
+
+        {/* Organizer lifecycle controls */}
+        {isOrganizer && e.status !== 'FINISHED' && e.status !== 'CANCELLED' && (
+          <Card className="order-6 space-y-3 p-4">
+            <p className="text-sm font-semibold text-muted-foreground">Керування (організатор)</p>
+            <div className="flex gap-2">
+              {e.status === 'UPCOMING' && (
+                <Button
+                  className="flex-1"
+                  disabled={start.isPending}
+                  onClick={() => start.mutate({ eventId: e.id })}
+                >
+                  Почати
+                </Button>
+              )}
+              {e.status === 'IN_PROGRESS' && (
+                <Button
+                  className="flex-1"
+                  disabled={finish.isPending}
+                  onClick={() => finish.mutate({ eventId: e.id })}
+                >
+                  Завершити
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                className="flex-1"
+                disabled={cancel.isPending}
+                onClick={() => cancel.mutate({ eventId: e.id })}
+              >
+                Скасувати
+              </Button>
+            </div>
+          </Card>
+        )}
+      </aside>
 
       {/* Pitch — tap a "+" on a line to join at that position */}
-      <PitchLineup
-        participants={e.participants}
-        teams={e.teams}
-        formation={formationFor(e.playersPerTeam, e.formation)}
-        playersPerTeam={e.playersPerTeam}
-        meId={userId}
-        canJoinBase={canJoin}
-        isLoggedIn={!!me.data}
-        joinPending={join.isPending}
-        onJoin={(position, teamId) => join.mutate({ eventId: e.id, position, teamId })}
-      />
-
-      {e.participants.some((p) => !p.teamId) && (
-        <Card className="space-y-2 p-3">
-          <p className="text-xs font-medium text-muted-foreground">Очікують команду</p>
-          <div className="flex flex-wrap gap-3">
-            {e.participants
-              .filter((p) => !p.teamId)
-              .map((p) => (
-                <div key={p.id} className="flex w-16 flex-col items-center gap-1">
-                  <PlayerAvatar name={p.user.name} url={p.user.avatarUrl} className="size-10" />
-                  <span className="max-w-16 truncate text-[11px]">{p.user.name}</span>
-                </div>
-              ))}
-          </div>
-        </Card>
-      )}
-
-      {mine && e.status === 'UPCOMING' && (
-        <Button
-          variant="outline"
-          className="w-full"
-          disabled={leave.isPending}
-          onClick={() => leave.mutate({ eventId: e.id })}
-        >
-          Вийти з гри ({POSITION_LABEL[mine.preferredPosition as PositionValue]})
-        </Button>
-      )}
-
-      {/* Organizer lifecycle controls */}
-      {isOrganizer && e.status !== 'FINISHED' && e.status !== 'CANCELLED' && (
-        <Card className="space-y-3 p-4">
-          <p className="text-sm font-semibold text-muted-foreground">Керування (організатор)</p>
-          <div className="flex gap-2">
-            {e.status === 'UPCOMING' && (
-              <Button
-                className="flex-1"
-                disabled={start.isPending}
-                onClick={() => start.mutate({ eventId: e.id })}
-              >
-                Почати
-              </Button>
-            )}
-            {e.status === 'IN_PROGRESS' && (
-              <Button
-                className="flex-1"
-                disabled={finish.isPending}
-                onClick={() => finish.mutate({ eventId: e.id })}
-              >
-                Завершити
-              </Button>
-            )}
-            <Button
-              variant="outline"
-              className="flex-1"
-              disabled={cancel.isPending}
-              onClick={() => cancel.mutate({ eventId: e.id })}
-            >
-              Скасувати
-            </Button>
-          </div>
-        </Card>
-      )}
+      <section className="order-3 min-w-0">
+        <PitchLineup
+          participants={e.participants}
+          teams={e.teams}
+          formation={formationFor(e.playersPerTeam, e.formation)}
+          playersPerTeam={e.playersPerTeam}
+          meId={userId}
+          canJoinBase={canJoin}
+          isLoggedIn={!!me.data}
+          joinPending={join.isPending}
+          onJoin={(position, teamId) => join.mutate({ eventId: e.id, position, teamId })}
+        />
+      </section>
     </div>
   );
 }

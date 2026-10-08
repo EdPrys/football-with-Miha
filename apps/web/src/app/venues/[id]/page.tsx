@@ -20,25 +20,27 @@ export default function VenuePage() {
   const venue = v.data;
 
   return (
-    <div className="space-y-5">
-      <div>
-        <h1 className="text-2xl font-bold">{venue.name}</h1>
-        <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
-          <MapPin className="size-4" />
-          {venue.city}
-        </p>
-      </div>
+    <div className="space-y-5 lg:grid lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)] lg:items-start lg:gap-8 lg:space-y-0">
+      <div className="space-y-5">
+        <div>
+          <h1 className="text-2xl font-bold md:text-3xl">{venue.name}</h1>
+          <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+            <MapPin className="size-4" />
+            {venue.city}
+          </p>
+        </div>
 
-      <div>
-        <h2 className="mb-2 text-sm font-semibold text-muted-foreground">
-          Поля ({venue.fields.length})
-        </h2>
-        <div className="flex flex-wrap gap-2">
-          {venue.fields.map((f) => (
-            <Badge key={f.id} variant={f.isActive ? 'secondary' : 'outline'}>
-              {f.name} · до {f.capacity}
-            </Badge>
-          ))}
+        <div>
+          <h2 className="mb-2 text-sm font-semibold text-muted-foreground">
+            Поля ({venue.fields.length})
+          </h2>
+          <div className="flex flex-wrap gap-2">
+            {venue.fields.map((f) => (
+              <Badge key={f.id} variant={f.isActive ? 'secondary' : 'outline'}>
+                {f.name} · до {f.capacity}
+              </Badge>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -47,7 +49,7 @@ export default function VenuePage() {
         {venue.events.length === 0 && (
           <p className="text-sm text-muted-foreground">Поки без запланованих ігор.</p>
         )}
-        <div className="space-y-2">
+        <div className="grid gap-2 md:grid-cols-2">
           {venue.events.map((e) => (
             <Link key={e.id} href={`/events/${e.id}`} className="block">
               <Card className="flex flex-row items-center justify-between p-3 transition-colors hover:border-primary/50">

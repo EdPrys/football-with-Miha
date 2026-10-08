@@ -1,25 +1,32 @@
 'use client';
 
 import Link from 'next/link';
-import { CalendarDays, MapPin, Users } from 'lucide-react';
+import { CalendarDays, MapPin, Plus, Users } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { buttonVariants } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import { formatDate, formatRange } from '@/lib/format';
 
 export default function DiscoverPage() {
   const { data, isLoading } = trpc.events.list.useQuery({});
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Знайти гру</h1>
-        <p className="text-sm text-muted-foreground">Найближчі матчі поруч</p>
+    <div className="space-y-4 md:space-y-6">
+      <div className="flex items-end justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Знайти гру</h1>
+          <p className="text-sm text-muted-foreground">Найближчі матчі поруч</p>
+        </div>
+        <Link href="/events/new" className={cn(buttonVariants(), 'hidden md:inline-flex')}>
+          <Plus className="mr-1 size-4" /> Створити гру
+        </Link>
       </div>
 
       {isLoading && (
-        <div className="space-y-3">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {Array.from({ length: 3 }).map((_, i) => (
             <Skeleton key={i} className="h-28 w-full rounded-xl" />
           ))}
@@ -32,10 +39,10 @@ export default function DiscoverPage() {
         </Card>
       )}
 
-      <div className="space-y-3">
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         {data?.map((e) => (
           <Link key={e.id} href={`/events/${e.id}`} className="block">
-            <Card className="p-4 transition-colors hover:border-primary/50">
+            <Card className="h-full p-4 transition-colors hover:border-primary/50">
               <div className="flex items-start justify-between gap-3">
                 <div className="space-y-1">
                   <div className="flex items-center gap-1.5 text-sm font-medium">

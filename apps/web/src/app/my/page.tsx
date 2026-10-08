@@ -24,7 +24,7 @@ export default function MyGamesPage() {
   if (me.isLoading) return <Skeleton className="h-40 w-full rounded-xl" />;
   if (!me.data)
     return (
-      <Card className="space-y-4 p-8 text-center">
+      <Card className="mx-auto max-w-md space-y-4 p-8 text-center">
         <p className="text-sm text-muted-foreground">Увійди, щоб бачити свої ігри.</p>
         <Link href="/login" className={cn(buttonVariants(), 'w-full')}>
           Увійти
@@ -33,8 +33,8 @@ export default function MyGamesPage() {
     );
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-bold">Мої ігри</h1>
+    <div className="space-y-4 md:space-y-6">
+      <h1 className="text-2xl font-bold md:text-3xl">Мої ігри</h1>
       {mine.isLoading && <Skeleton className="h-28 w-full rounded-xl" />}
       {mine.data && mine.data.length === 0 && (
         <Card className="p-8 text-center text-sm text-muted-foreground">
@@ -44,10 +44,10 @@ export default function MyGamesPage() {
           </Link>
         </Card>
       )}
-      <div className="space-y-3">
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         {mine.data?.map((e) => (
           <Link key={e.id} href={`/events/${e.id}`} className="block">
-            <Card className="space-y-2 p-4 transition-colors hover:border-primary/50">
+            <Card className="h-full space-y-2 p-4 transition-colors hover:border-primary/50">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5 text-sm font-medium">
                   <CalendarDays className="size-4 text-primary" />
