@@ -71,7 +71,10 @@ export default function NewEventPage() {
   if (me.data.user.role === 'PLAYER')
     return (
       <Card className="mx-auto max-w-md p-8 text-center text-sm text-muted-foreground">
-        Тільки менеджери можуть створювати ігри.
+        Тільки організатори можуть створювати ігри.{' '}
+        <Link href="/help#faq" className="text-primary underline-offset-2 hover:underline">
+          Як стати організатором?
+        </Link>
       </Card>
     );
 

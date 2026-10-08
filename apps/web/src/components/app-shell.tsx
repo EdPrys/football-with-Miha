@@ -2,7 +2,16 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Compass, CalendarCheck, PlusCircle, User, Moon, Sun, Bell } from 'lucide-react';
+import {
+  Compass,
+  CalendarCheck,
+  PlusCircle,
+  User,
+  Moon,
+  Sun,
+  Bell,
+  CircleHelp,
+} from 'lucide-react';
 import { useTheme } from 'next-themes';
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
@@ -86,7 +95,19 @@ export function AppShell({ children }: { children: ReactNode }) {
             })}
           </nav>
 
-          <ThemeToggle />
+          <div className="flex items-center">
+            <Link
+              href="/help"
+              aria-label="Як це працює"
+              className={cn(
+                'rounded-md p-2 transition-colors hover:text-foreground',
+                pathname === '/help' ? 'text-primary' : 'text-muted-foreground',
+              )}
+            >
+              <CircleHelp className="size-5" />
+            </Link>
+            <ThemeToggle />
+          </div>
         </div>
       </header>
 

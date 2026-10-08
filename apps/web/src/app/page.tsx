@@ -35,7 +35,10 @@ export default function DiscoverPage() {
 
       {data && data.length === 0 && (
         <Card className="p-8 text-center text-sm text-muted-foreground">
-          Поки що немає ігор. Створи першу!
+          Поки що немає ігор. Створи першу!{' '}
+          <Link href="/help" className="text-primary underline-offset-2 hover:underline">
+            Як це працює?
+          </Link>
         </Card>
       )}
 
