@@ -33,10 +33,12 @@ Build the MVP around this loop. Do NOT build future features (payments, AI team 
 Single `User.role` enum, ordered `PLAYER < MANAGER < ADMIN` (higher inherits lower). **Everyone can play** regardless of role — a role only adds staff abilities.
 
 - **PLAYER**: join events, pick position, play, rate.
-- **MANAGER**: + create events (also a player).
-- **ADMIN**: + manage users, create Venues/Fields/halls (also a player). Only admins create places, so the catalogue isn't spammed with empty venues.
+- **MANAGER** ("організатор"): + create events and Venues/Fields/halls (also a player). Players can't create places, so the catalogue isn't spammed with empty venues.
+- **ADMIN**: + manage users (also a player).
 
-Enforce in `apps/api/src/trpc.ts` via `protectedProcedure` / `managerProcedure` / `adminProcedure` (built on `roleAtLeast` from `@app/domain`). `events.create` = manager+, venue/field creation = admin.
+A player becomes MANAGER by pressing "Стати організатором" (`users.requestOrganizer` → `requestOrganizerRole` in `packages/domain/src/users/role-request.ts`). Each request is stored as a `RoleRequest`; while `AUTO_APPROVE_ORGANIZER` is true it is approved immediately. ADMIN is never self-service.
+
+Enforce in `apps/api/src/trpc.ts` via `protectedProcedure` / `managerProcedure` / `adminProcedure` (built on `roleAtLeast` from `@app/domain`). `events.create` and venue/field creation = manager+, user/role management = admin.
 
 Frontends: `apps/web` (players), `apps/admin-web` (admin — user role mgmt + venue/field CRUD), React Native mobile (future).
 

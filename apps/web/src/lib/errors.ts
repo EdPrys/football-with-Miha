@@ -36,6 +36,8 @@ const MESSAGES: Record<string, string> = {
   'Player not found': 'Гравця не знайдено',
   'User not found': 'Користувача не знайдено',
   'Venue not found': 'Майданчик не знайдено',
+  'You already have organizer rights': 'Ти вже організатор',
+  'Your request is already under review': 'Твій запит уже розглядається',
   'You are not an active participant': 'Ти не записаний на цю гру',
   'Invalid formation for this team size': 'Ця схема не підходить для такого розміру команди',
   'Team does not belong to this event': 'Ця команда не з цієї гри',

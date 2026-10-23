@@ -62,6 +62,12 @@ enum NotificationType {
   RATING_AVAILABLE
 }
 
+enum RoleRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 // ---------- Users & profile ----------
 model User {
   id           String   @id @default(cuid())
@@ -81,6 +87,7 @@ model User {
   ratingsGiven     Rating[]          @relation("RatingRater")
   ratingsReceived  Rating[]          @relation("RatingRatee")
   notifications    Notification[]
+  roleRequests     RoleRequest[]
 }
 
 // The "football profile". Aggregated skills are stored in PlayerSkill rows,
@@ -230,4 +237,18 @@ model Notification {
   createdAt DateTime         @default(now())
 
   @@index([userId, readAt])
+}
+
+// A player asking for a higher role. Organizer requests are auto-approved for
+// now; the row keeps the audit trail and lets us switch to manual review later.
+model RoleRequest {
+  id        String            @id @default(cuid())
+  userId    String
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      Role
+  status    RoleRequestStatus @default(PENDING)
+  createdAt DateTime          @default(now())
+  decidedAt DateTime?
+
+  @@index([userId, status])
 }

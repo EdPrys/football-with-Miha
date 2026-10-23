@@ -7,6 +7,8 @@ import { toast } from 'sonner';
 import { trpc } from '@/lib/trpc';
 import { errorMessage } from '@/lib/errors';
 import { formationOptionsFor } from '@/lib/formation';
+import { BecomeOrganizer } from '@/components/become-organizer';
+import { AddVenueDialog } from '@/components/add-venue-dialog';
 import { Card } from '@/components/ui/card';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -69,15 +71,7 @@ export default function NewEventPage() {
         </Link>
       </Card>
     );
-  if (me.data.user.role === 'PLAYER')
-    return (
-      <Card className="mx-auto max-w-md p-8 text-center text-sm text-muted-foreground">
-        Тільки організатори можуть створювати ігри.{' '}
-        <Link href="/help#faq" className="text-primary underline-offset-2 hover:underline">
-          Як стати організатором?
-        </Link>
-      </Card>
-    );
+  if (me.data.user.role === 'PLAYER') return <BecomeOrganizer className="mx-auto max-w-md" />;
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
@@ -118,6 +112,7 @@ export default function NewEventPage() {
                 ))}
               </SelectContent>
             </Select>
+            <AddVenueDialog venues={venues.data ?? []} onCreated={setFieldId} />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="date">Дата</Label>

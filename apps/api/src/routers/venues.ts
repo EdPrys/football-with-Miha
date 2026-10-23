@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { eventCapacity, DomainError } from '@app/domain';
 import { ParticipantStatus } from '@app/db';
-import { router, publicProcedure, adminProcedure } from '../trpc.js';
+import { router, publicProcedure, managerProcedure } from '../trpc.js';
 
 const ACTIVE: ParticipantStatus[] = [ParticipantStatus.JOINED, ParticipantStatus.ATTENDED];
 
@@ -52,16 +52,17 @@ export const venuesRouter = router({
     };
   }),
 
-  // Only admins create places, so the catalogue isn't spammed with empty venues.
-  create: adminProcedure
+  // Organizers (manager+) create places; players can't, so the catalogue
+  // isn't spammed with empty venues.
+  create: managerProcedure
     .input(z.object({ name: z.string().min(1).max(120), city: z.string().min(1).max(120) }))
     .mutation(async ({ ctx, input }) => {
       const venue = await ctx.prisma.venue.create({ data: input });
       return { id: venue.id };
     }),
 
-  // Admin adds a field/hall/room to an existing venue.
-  addField: adminProcedure
+  // An organizer adds a field/hall/room to an existing venue.
+  addField: managerProcedure
     .input(
       z.object({
         venueId: z.string().min(1),

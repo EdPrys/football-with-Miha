@@ -7,11 +7,18 @@ import { trpc } from '@/lib/trpc';
 import { clearToken } from '@/lib/auth';
 import { formatDate } from '@/lib/format';
 import { AvatarEditor } from '@/components/avatar-editor';
+import { BecomeOrganizer } from '@/components/become-organizer';
 import { Card } from '@/components/ui/card';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+
+const ROLE_LABEL: Record<string, string> = {
+  PLAYER: 'Гравець',
+  MANAGER: 'Організатор',
+  ADMIN: 'Адміністратор',
+};
 
 const SKILL_LABEL: Record<string, string> = {
   PACE: 'Швидкість',
@@ -63,7 +70,7 @@ export default function ProfilePage() {
           <div>
             <h1 className="text-2xl font-bold md:text-3xl">{me.data.user.name}</h1>
             <Badge variant="secondary" className="mt-1">
-              {me.data.user.role}
+              {ROLE_LABEL[me.data.user.role] ?? me.data.user.role}
             </Badge>
           </div>
         </div>
@@ -71,6 +78,8 @@ export default function ProfilePage() {
           <LogOut className="size-5" />
         </Button>
       </div>
+
+      {me.data.user.role === 'PLAYER' && <BecomeOrganizer />}
 
       <div className="grid gap-5 lg:grid-cols-2 lg:items-start lg:gap-8">
         <div className="space-y-5">

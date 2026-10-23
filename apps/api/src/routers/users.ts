@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { Role } from '@app/db';
+import { requestOrganizerRole } from '@app/domain';
 import { router, protectedProcedure, adminProcedure } from '../trpc.js';
 
 // An avatar is either a link or a small inline image. Uploads are resized
@@ -25,6 +26,12 @@ export const usersRouter = router({
       });
       return { ok: true };
     }),
+
+  // A player asks to become an organizer (auto-approved for now, see domain).
+  requestOrganizer: protectedProcedure.mutation(async ({ ctx }) => {
+    const request = await requestOrganizerRole(ctx.prisma, ctx.user.id);
+    return { status: request.status };
+  }),
 
   // Look a teammate up by email to invite them to an event.
   findByEmail: protectedProcedure
