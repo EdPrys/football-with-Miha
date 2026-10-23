@@ -63,7 +63,7 @@ export const playersRouter = router({
       };
     }),
 
-  // The current player sets their own skills (1–5 each).
+  // The current player sets their own skills (1–100 each).
   updateMySkills: protectedProcedure.input(skillValues).mutation(async ({ ctx, input }) => {
     await setOwnSkills(ctx.prisma, ctx.user.id, input);
     return { ok: true };

@@ -68,6 +68,13 @@ export default function ProfilePage() {
             <Badge variant="secondary" className="mt-1">
               {ROLE_LABEL[me.data.user.role] ?? me.data.user.role}
             </Badge>
+            {p && (
+              <p className="mt-1 text-xs tabular-nums text-muted-foreground">
+                {p.stars.average != null
+                  ? `★ ${p.stars.average.toFixed(1)} · оцінок: ${p.stars.count}`
+                  : 'Ще немає оцінок'}
+              </p>
+            )}
           </div>
         </div>
         <Button variant="ghost" size="icon" onClick={logout} aria-label="Вийти">

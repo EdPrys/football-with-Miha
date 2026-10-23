@@ -7,8 +7,9 @@ became a self-assessment and peer feedback became a single star score.
 
 `PACE, DRIBBLING, PASSING, SHOOTING, DEFENDING, PHYSICAL` (SkillType enum).
 
-Each player sets all six themselves on their profile, whole numbers 1–5, and
-saves with a button (`players.updateMySkills` → `setOwnSkills` in
+Each player sets all six themselves on their profile, whole numbers 1–100
+(slider + number field, "Редагувати" → "Зберегти"; the 2026-10-23 migration
+scaled earlier 1–5 values ×20) (`players.updateMySkills` → `setOwnSkills` in
 `packages/domain/src/skills/self.ts`). New profiles start at 0 = "not set".
 `PlayerSkill.ratingsCount` is legacy and no longer updated.
 
@@ -30,7 +31,8 @@ rounded average.
 
 ## Aggregation — isolated & swappable
 
-The number shown under a player's avatar comes from `starAggregator` in
+Shown under the avatar as a 5-star row filled in proportion to the average
+(3.4 → three full stars, the fourth 40% filled). The number comes from `starAggregator` in
 `packages/domain/src/ratings/stars.ts`, built on the generic aggregator in
 `packages/domain/src/skills/aggregate.ts`:
 

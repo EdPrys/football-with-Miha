@@ -3,41 +3,44 @@ import { cn } from '@/lib/utils';
 
 export type StarSummary = { average: number | null; count: number };
 
-/** Compact read-only stars for under an avatar; renders nothing until rated. */
+/**
+ * Read-only 5-star row filled in proportion to the average (3.4 → three full
+ * stars and the fourth 40% filled), like a ride-hailing driver rating.
+ * Renders nothing until the player has been rated.
+ */
 export function StarRow({
   stars,
-  showValue = false,
   className,
   starClassName,
 }: {
   stars?: StarSummary | null;
-  showValue?: boolean;
   className?: string;
   starClassName?: string;
 }) {
   if (!stars || stars.average == null) return null;
-  const filled = Math.round(stars.average);
+  const avg = stars.average;
   return (
     <div
       className={cn('flex items-center gap-px', className)}
-      title={`${stars.average.toFixed(1)} з 5 · оцінок: ${stars.count}`}
-      aria-label={`Рейтинг ${stars.average.toFixed(1)} з 5`}
+      title={`${avg.toFixed(1)} з 5 · оцінок: ${stars.count}`}
+      aria-label={`Рейтинг ${avg.toFixed(1)} з 5`}
     >
-      {Array.from({ length: 5 }, (_, i) => (
-        <Star
-          key={i}
-          className={cn(
-            'size-2.5',
-            i < filled ? 'fill-amber-400 text-amber-400' : 'text-current opacity-30',
-            starClassName,
-          )}
-        />
-      ))}
-      {showValue && (
-        <span className="ml-1 text-xs tabular-nums text-muted-foreground">
-          {stars.average.toFixed(1)} ({stars.count})
-        </span>
-      )}
+      {Array.from({ length: 5 }, (_, i) => {
+        const fill = Math.min(1, Math.max(0, avg - i));
+        return (
+          <span key={i} className="relative inline-flex">
+            <Star className={cn('size-2.5 text-current opacity-30', starClassName)} />
+            {fill > 0 && (
+              <span
+                className="absolute inset-y-0 left-0 overflow-hidden"
+                style={{ width: `${fill * 100}%` }}
+              >
+                <Star className={cn('size-2.5 fill-amber-400 text-amber-400', starClassName)} />
+              </span>
+            )}
+          </span>
+        );
+      })}
     </div>
   );
 }

@@ -3,16 +3,16 @@ import { DomainError } from '../errors.js';
 import { ALL_SKILLS, type SkillName } from './constants.js';
 
 export const MIN_SKILL = 1;
-export const MAX_SKILL = 5;
+export const MAX_SKILL = 100;
 
 export type SkillValues = Record<SkillName, number>;
 
-/** Pure validation of a self-assessment: every skill, whole numbers 1–5. */
+/** Pure validation of a self-assessment: every skill, whole numbers 1–100. */
 export function assertValidSkills(values: SkillValues): void {
   for (const skill of ALL_SKILLS) {
     const v = values[skill];
     if (!Number.isInteger(v) || v < MIN_SKILL || v > MAX_SKILL) {
-      throw new DomainError('VALIDATION', 'Each skill must be from 1 to 5');
+      throw new DomainError('VALIDATION', 'Each skill must be from 1 to 100');
     }
   }
 }
