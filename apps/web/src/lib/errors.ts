@@ -11,6 +11,9 @@ const MESSAGES: Record<string, string> = {
   'Already invited': 'Цього гравця вже запрошено',
   'This person already joined the event': 'Цей гравець вже в грі',
   'You already rated this player for this event': 'Ти вже оцінив цього гравця за цю гру',
+  'Rating is closed 24 hours after the game': 'Оцінювати можна лише протягом доби після гри',
+  'Stars must be from 1 to 5': 'Оцінка — від 1 до 5 зірок',
+  'Each skill must be from 1 to 5': 'Кожна навичка — від 1 до 5',
   'You have already joined this event': 'Ти вже записаний на цю гру',
   'Only the organizer can manage this event': 'Керувати грою може лише організатор',
   'Only the organizer or a participant can invite others':

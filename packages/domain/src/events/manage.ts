@@ -37,7 +37,10 @@ export async function finishEvent(prisma: PrismaClient, input: ManageInput): Pro
       where: { eventId: event.id, status: 'JOINED' },
       data: { status: 'ATTENDED' },
     });
-    return tx.event.update({ where: { id: event.id }, data: { status: 'FINISHED' } });
+    return tx.event.update({
+      where: { id: event.id },
+      data: { status: 'FINISHED', finishedAt: new Date() },
+    });
   });
 
   const participants = await prisma.eventParticipant.findMany({

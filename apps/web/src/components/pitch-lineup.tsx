@@ -4,13 +4,14 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { PlayerAvatar } from './player-avatar';
+import { StarRow, type StarSummary } from './star-row';
 import { cn } from '@/lib/utils';
 
 type Participant = {
   id: string;
   preferredPosition: string;
   teamId: string | null;
-  user: { id: string; name: string; avatarUrl: string | null };
+  user: { id: string; name: string; avatarUrl: string | null; stars?: StarSummary };
 };
 type Team = { id: string; name: string };
 
@@ -94,6 +95,7 @@ export function PitchLineup({
         )}
       />
       <span className="max-w-16 truncate text-[11px] font-medium text-white">{p.user.name}</span>
+      <StarRow stars={p.user.stars} className="-mt-0.5 text-white" />
     </div>
   );
 

@@ -8,6 +8,8 @@ import { clearToken } from '@/lib/auth';
 import { formatDate } from '@/lib/format';
 import { AvatarEditor } from '@/components/avatar-editor';
 import { BecomeOrganizer } from '@/components/become-organizer';
+import { SkillsEditor } from '@/components/skills-editor';
+import { StarRow } from '@/components/star-row';
 import { Card } from '@/components/ui/card';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -18,15 +20,6 @@ const ROLE_LABEL: Record<string, string> = {
   PLAYER: 'Гравець',
   MANAGER: 'Організатор',
   ADMIN: 'Адміністратор',
-};
-
-const SKILL_LABEL: Record<string, string> = {
-  PACE: 'Швидкість',
-  DRIBBLING: 'Дриблінг',
-  PASSING: 'Пас',
-  SHOOTING: 'Удар',
-  DEFENDING: 'Захист',
-  PHYSICAL: 'Фізика',
 };
 
 export default function ProfilePage() {
@@ -66,7 +59,10 @@ export default function ProfilePage() {
     <div className="space-y-5 md:space-y-8">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <AvatarEditor name={me.data.user.name} url={me.data.user.avatarUrl} />
+          <div className="flex flex-col items-center gap-1.5">
+            <AvatarEditor name={me.data.user.name} url={me.data.user.avatarUrl} />
+            <StarRow stars={p?.stars} starClassName="size-3" />
+          </div>
           <div>
             <h1 className="text-2xl font-bold md:text-3xl">{me.data.user.name}</h1>
             <Badge variant="secondary" className="mt-1">
@@ -86,28 +82,13 @@ export default function ProfilePage() {
           <div className="grid grid-cols-3 gap-3">
             <Stat label="Матчі" value={p ? String(p.matchesPlayed) : '—'} />
             <Stat label="Відвідуваність" value={p?.attendance != null ? `${p.attendance}%` : '—'} />
-            <Stat label="Оцінок" value={p ? String(p.totalRatings) : '—'} />
+            <Stat
+              label={p?.stars.count ? `Рейтинг · ${p.stars.count}` : 'Рейтинг'}
+              value={p?.stars.average != null ? `★ ${p.stars.average.toFixed(1)}` : '—'}
+            />
           </div>
 
-          <Card className="p-5">
-            <h2 className="mb-4 text-sm font-semibold text-muted-foreground">Навички</h2>
-            <div className="space-y-3">
-              {(p?.skills ?? []).map((s) => (
-                <div key={s.skill} className="space-y-1">
-                  <div className="flex items-center justify-between text-sm">
-                    <span>{SKILL_LABEL[s.skill] ?? s.skill}</span>
-                    <span className="font-medium tabular-nums">{s.value.toFixed(1)}</span>
-                  </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-muted">
-                    <div
-                      className="h-full rounded-full bg-primary transition-all"
-                      style={{ width: `${(s.value / 5) * 100}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Card>
+          {p && <SkillsEditor key={p.id} skills={p.skills} />}
         </div>
 
         <div>

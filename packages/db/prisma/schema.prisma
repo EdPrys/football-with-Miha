@@ -152,6 +152,8 @@ model Event {
   // "DEF-MID-FWD" key from formationOptionsFor(playersPerTeam); GK is always 1 and implicit.
   formation      String?
   status         EventStatus @default(UPCOMING)
+  // Set when the organizer finishes the game; star ratings close 24h later.
+  finishedAt     DateTime?
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
 
@@ -215,12 +217,16 @@ model Rating {
   rater     User     @relation("RatingRater", fields: [raterId], references: [id])
   rateeId   String
   ratee     User     @relation("RatingRatee", fields: [rateeId], references: [id])
-  pace      Int
-  dribbling Int
-  passing   Int
-  shooting  Int
-  defending Int
-  physical  Int
+  // One 1–5 star score per (event, rater, ratee).
+  stars     Int
+  // Legacy per-skill scores from before 2026-10-23 (skills are self-assessed
+  // now). Kept read-only for history; new ratings leave them null.
+  pace      Int?
+  dribbling Int?
+  passing   Int?
+  shooting  Int?
+  defending Int?
+  physical  Int?
   createdAt DateTime @default(now())
 
   @@unique([eventId, raterId, rateeId])

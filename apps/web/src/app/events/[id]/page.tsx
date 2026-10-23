@@ -67,7 +67,8 @@ export default function EventPage() {
   const mine = userId ? e.participants.find((p) => p.user.id === userId) : undefined;
   const isOrganizer = !!userId && e.organizer.id === userId;
   const full = e.availableSlots <= 0;
-  const canRate = e.status === 'FINISHED' && mine?.status === 'ATTENDED';
+  const ratingOpen = !!e.ratingClosesAt && new Date() <= new Date(e.ratingClosesAt);
+  const canRate = e.status === 'FINISHED' && mine?.status === 'ATTENDED' && ratingOpen;
   const canJoin = e.status === 'UPCOMING' && !mine && !full;
 
   // Mobile: one column in the original order (aside is `display: contents`, so its

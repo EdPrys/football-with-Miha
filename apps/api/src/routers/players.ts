@@ -1,9 +1,25 @@
 import { z } from 'zod';
-import { attendancePercent, DomainError } from '@app/domain';
-import { router, publicProcedure } from '../trpc.js';
+import {
+  ALL_SKILLS,
+  attendancePercent,
+  DomainError,
+  MAX_SKILL,
+  MIN_SKILL,
+  setOwnSkills,
+  starSummariesFor,
+} from '@app/domain';
+import { router, publicProcedure, protectedProcedure } from '../trpc.js';
+
+const skillValue = z.number().int().min(MIN_SKILL).max(MAX_SKILL);
+const skillValues = z.object(
+  Object.fromEntries(ALL_SKILLS.map((s) => [s, skillValue])) as Record<
+    (typeof ALL_SKILLS)[number],
+    typeof skillValue
+  >,
+);
 
 export const playersRouter = router({
-  // Aggregated football profile: skills, ratings, matches, attendance.
+  // Football profile: self-assessed skills, received stars, matches, attendance.
   profile: publicProcedure
     .input(z.object({ userId: z.string().min(1) }))
     .query(async ({ ctx, input }) => {
@@ -28,8 +44,8 @@ export const playersRouter = router({
       });
       if (!user) throw new DomainError('NOT_FOUND', 'Player not found');
 
-      const [totalRatings, attended, noShow] = await Promise.all([
-        ctx.prisma.rating.count({ where: { rateeId: input.userId } }),
+      const [stars, attended, noShow] = await Promise.all([
+        starSummariesFor(ctx.prisma, [input.userId]),
         ctx.prisma.eventParticipant.count({ where: { userId: input.userId, status: 'ATTENDED' } }),
         ctx.prisma.eventParticipant.count({ where: { userId: input.userId, status: 'NO_SHOW' } }),
       ]);
@@ -41,11 +57,17 @@ export const playersRouter = router({
         role: user.role,
         bio: user.profile?.bio ?? null,
         skills: user.profile?.skills ?? [],
-        totalRatings,
+        stars: stars.get(input.userId)!,
         matchesPlayed: attended,
         attendance: attendancePercent({ attended, noShow }),
       };
     }),
+
+  // The current player sets their own skills (1–5 each).
+  updateMySkills: protectedProcedure.input(skillValues).mutation(async ({ ctx, input }) => {
+    await setOwnSkills(ctx.prisma, ctx.user.id, input);
+    return { ok: true };
+  }),
 
   // Past (finished) matches for a player.
   matchHistory: publicProcedure

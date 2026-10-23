@@ -12,30 +12,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { StarRating } from '@/components/star-rating';
 import { PlayerAvatar } from '@/components/player-avatar';
 import { cn } from '@/lib/utils';
-
-const SKILLS = [
-  ['pace', 'Швидкість'],
-  ['dribbling', 'Дриблінг'],
-  ['passing', 'Пас'],
-  ['shooting', 'Удар'],
-  ['defending', 'Захист'],
-  ['physical', 'Фізика'],
-] as const;
-
-type Scores = Record<(typeof SKILLS)[number][0], number>;
-const DEFAULTS: Scores = {
-  pace: 3,
-  dribbling: 3,
-  passing: 3,
-  shooting: 3,
-  defending: 3,
-  physical: 3,
-};
+import { formatDate, formatTime } from '@/lib/format';
 
 export default function RatePage() {
   const { id } = useParams<{ id: string }>();
   const me = trpc.auth.me.useQuery(undefined, { retry: false });
   const targets = trpc.ratings.rateableTargets.useQuery({ eventId: id }, { enabled: !!me.data });
+  const [skipped, setSkipped] = useState<string[]>([]);
 
   if (me.isLoading || targets.isLoading) return <Skeleton className="h-72 w-full rounded-xl" />;
 
@@ -49,13 +32,19 @@ export default function RatePage() {
       </Card>
     );
 
-  const list = targets.data ?? [];
+  const closesAt = targets.data?.closesAt ? new Date(targets.data.closesAt) : null;
+  // Rating is optional: skipped players simply drop out of this session's queue.
+  const list = (targets.data?.targets ?? []).filter((t) => !skipped.includes(t.userId));
   const current = list[0];
 
   if (!current)
     return (
       <Card className="mx-auto max-w-md space-y-4 p-8 text-center">
-        <p className="text-sm">🎉 Ти оцінив усіх, з ким грав. Дякуємо!</p>
+        <p className="text-sm">
+          {closesAt && new Date() > closesAt
+            ? 'Оцінювати можна було протягом доби після гри — час минув.'
+            : 'Готово! Дякуємо, що оцінив гравців.'}
+        </p>
         <Link
           href={`/events/${id}`}
           className={cn(buttonVariants({ variant: 'outline' }), 'w-full')}
@@ -69,7 +58,10 @@ export default function RatePage() {
     <div className="mx-auto w-full max-w-xl space-y-4">
       <div>
         <h1 className="text-2xl font-bold">Оцінити гравців</h1>
-        <p className="text-sm text-muted-foreground">Залишилось: {list.length}</p>
+        <p className="text-sm text-muted-foreground">
+          Залишилось: {list.length}
+          {closesAt && ` · можна до ${formatDate(closesAt)}, ${formatTime(closesAt)}`}
+        </p>
       </div>
       <RatingForm
         key={current.userId}
@@ -77,6 +69,7 @@ export default function RatePage() {
         userId={current.userId}
         name={current.name}
         avatarUrl={current.avatarUrl}
+        onSkip={() => setSkipped((s) => [...s, current.userId])}
       />
     </div>
   );
@@ -87,14 +80,16 @@ function RatingForm({
   userId,
   name,
   avatarUrl,
+  onSkip,
 }: {
   eventId: string;
   userId: string;
   name: string;
   avatarUrl: string | null;
+  onSkip: () => void;
 }) {
   const utils = trpc.useUtils();
-  const [scores, setScores] = useState<Scores>(DEFAULTS);
+  const [stars, setStars] = useState(0);
   const submit = trpc.ratings.submit.useMutation({
     onSuccess: () => {
       toast.success(`Оцінку для ${name} збережено`);
@@ -105,28 +100,26 @@ function RatingForm({
 
   return (
     <Card className="space-y-5 p-5">
-      <div className="flex items-center gap-3">
-        <PlayerAvatar name={name} url={avatarUrl} className="size-11" />
+      <div className="flex flex-col items-center gap-2 text-center">
+        <PlayerAvatar name={name} url={avatarUrl} className="size-16" />
         <p className="text-lg font-semibold">{name}</p>
+        <p className="text-sm text-muted-foreground">Як зіграв цей гравець?</p>
       </div>
-      <div className="space-y-4">
-        {SKILLS.map(([key, label]) => (
-          <div key={key} className="flex items-center justify-between gap-3">
-            <span className="text-sm">{label}</span>
-            <StarRating
-              value={scores[key]}
-              onChange={(v) => setScores((s) => ({ ...s, [key]: v }))}
-            />
-          </div>
-        ))}
+      <div className="flex justify-center">
+        <StarRating value={stars} onChange={setStars} />
       </div>
-      <Button
-        className="w-full"
-        disabled={submit.isPending}
-        onClick={() => submit.mutate({ eventId, rateeId: userId, scores })}
-      >
-        {submit.isPending ? '...' : 'Зберегти оцінку'}
-      </Button>
+      <div className="flex gap-2">
+        <Button variant="outline" className="flex-1" disabled={submit.isPending} onClick={onSkip}>
+          Пропустити
+        </Button>
+        <Button
+          className="flex-1"
+          disabled={submit.isPending || stars === 0}
+          onClick={() => submit.mutate({ eventId, rateeId: userId, stars })}
+        >
+          {submit.isPending ? '...' : 'Оцінити'}
+        </Button>
+      </div>
     </Card>
   );
 }

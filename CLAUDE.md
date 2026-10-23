@@ -6,7 +6,7 @@ Guidance for code generation in this repo. Read before writing code.
 
 A **football pickup-game social platform** (not just field booking). The MVP proves one loop:
 
-`register → find/create event → join → pick position → play → rate players → skills recalculated → view profile`
+`register → set own skills → find/create event → join → pick position → play → give stars (optional, 24h) → view profile`
 
 Build the MVP around this loop. Do NOT build future features (payments, AI team balancing, detailed positions, chat, recommendations) unless explicitly asked. See `docs/PRODUCT_PLAN.md`.
 
@@ -22,8 +22,8 @@ Build the MVP around this loop. Do NOT build future features (payments, AI team 
 ## Architecture rules
 
 1. **Domain logic never lives in tRPC procedures or route handlers.** Procedures validate input (zod) → call a `packages/domain` service → persist via Prisma → return. Keep procedures thin.
-2. **Skill aggregation is an isolated, swappable service** (`packages/domain/src/skills/`). The current algorithm is a plain average; it must be replaceable (Bayesian, weighted, recency) without touching callers. See `docs/SKILLS.md`.
-3. **Invariants are enforced in the domain layer**, not the UI: can't join a full/cancelled/finished event, can't join twice, can't rate yourself / non-participants, one rating per (event, rater, ratee).
+2. **Skills are self-assessed; peers give stars.** Players set their six skills 1–5 themselves (`skills/self.ts`). After a game co-players may give each other one 1–5 star score; the shown rating is an isolated, swappable aggregation (`ratings/stars.ts` → `starAggregator`, plain average now). See `docs/SKILLS.md`.
+3. **Invariants are enforced in the domain layer**, not the UI: can't join a full/cancelled/finished event, can't join twice, can't rate yourself / non-participants, one rating per (event, rater, ratee), rating only within 24h after the game is finished (`Event.finishedAt`).
 4. **State machines** for Event, Participant, Invitation status transitions — centralize allowed transitions in domain, don't scatter status checks.
 5. **Shared types come from packages** (`@app/db` Prisma types, `@app/domain` enums/DTOs). Don't redefine enums per app.
 6. Develop **vertically** (full loop first), not entity-by-entity.

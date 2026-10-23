@@ -11,8 +11,8 @@ Football pickup-game platform. Core loop:
 3. A booking becomes a football **Event**.
 4. An Event defines match format, number of teams, players per team.
 5. Users join an Event, pick a preferred position, or are invited by the organizer.
-6. After the match, players rate the players they played with.
-7. Player skills are calculated from received ratings.
+6. After the match, players may give the players they played with 1–5 stars (within 24h).
+7. Players set their own skills; received stars are averaged into a rating shown under the avatar.
 8. Users see their profile, skills, match history, participation stats.
 
 Feels like a **social football platform**, not a field-booking app.
@@ -25,7 +25,7 @@ Keep architecture simple & maintainable. No premature microservices/k8s/kafka.
 ## 3. Entities
 
 **User**: id, name, email, password/auth, avatar, createdAt, updatedAt. Has a football profile.
-**Player Skills** (computed, never user-set): pace, dribbling, passing, shooting, defending, physical. Each carries the number of ratings used. Aggregation must be isolated/swappable.
+**Player Skills** (self-assessed 1–5, changed 2026-10-23): pace, dribbling, passing, shooting, defending, physical. Peer feedback is a single star score per game; its aggregation must be isolated/swappable.
 
 ## 4. Venue & Field
 
@@ -67,7 +67,7 @@ UPCOMING → IN_PROGRESS → FINISHED. Organizer starts/finishes. On FINISHED, r
 
 ## 13. Ratings
 
-After FINISHED, rate players you actually played with. Disallow rating: yourself, non-participants, users from another event. Categories: pace, dribbling, passing, shooting, defending, physical. Scale 1–5. One rating per (player, event). Immutable in MVP (or tightly controlled edits).
+After FINISHED and for 24h, optionally give players you actually played with 1–5 stars. Disallow rating: yourself, non-participants, users from another event, after the window. One rating per (player, event). Immutable.
 
 ## 14. Skill calculation
 
