@@ -39,11 +39,11 @@ const MESSAGES: Record<string, string> = {
   'You already have organizer rights': 'Ти вже організатор',
   'Your request is already under review': 'Твій запит уже розглядається',
   'You are not an active participant': 'Ти не записаний на цю гру',
-  'Invalid formation for this team size': 'Ця схема не підходить для такого розміру команди',
   'Team does not belong to this event': 'Ця команда не з цієї гри',
   'You cannot invite yourself': 'Не можна запросити самого себе',
   'endAt must be after startAt': 'Кінець гри має бути пізніше за початок',
-  'playersPerTeam must be at least 1': 'У команді має бути хоча б 1 гравець',
+  'playersPerTeam must be between 2 and 11': 'Формат гри — від 2 на 2 до 11 на 11',
+  'This team already has a goalkeeper': 'У цій команді вже є воротар',
   'startAt must be in the future': 'Час початку має бути в майбутньому',
 };
 

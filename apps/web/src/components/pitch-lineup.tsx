@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
-import type { Formation, LinePosition } from '@/lib/formation';
 import { PlayerAvatar } from './player-avatar';
 import { cn } from '@/lib/utils';
 
@@ -26,8 +25,18 @@ const TEAM_TEXT = [
 ];
 const TEAM_DOT = ['bg-emerald-300', 'bg-sky-300', 'bg-amber-300', 'bg-fuchsia-300'];
 
-// GK nearest the goal (top), FWD nearest the halfway line (bottom of the half-pitch card).
-const ORDER: LinePosition[] = ['GK', 'DEF', 'MID', 'FWD'];
+export type JoinPosition = 'GK' | 'MID';
+
+// One goalkeeper by the goal; everyone else is an outfield player, laid out
+// in rows of three. Outfield joins are stored as MID (see OUTFIELD_POSITION
+// in @app/domain); older DEF/FWD rows render as outfield players too.
+const OUTFIELD_PER_ROW = 3;
+
+function chunk<T>(items: T[], size: number): T[][] {
+  const rows: T[][] = [];
+  for (let i = 0; i < items.length; i += size) rows.push(items.slice(i, i + size));
+  return rows;
+}
 
 const net = {
   backgroundImage:
@@ -38,7 +47,6 @@ const net = {
 export function PitchLineup({
   participants,
   teams,
-  formation,
   playersPerTeam,
   meId,
   canJoinBase,
@@ -48,13 +56,12 @@ export function PitchLineup({
 }: {
   participants: Participant[];
   teams: Team[];
-  formation: Formation;
   playersPerTeam: number;
   meId?: string;
   canJoinBase: boolean;
   isLoggedIn: boolean;
   joinPending: boolean;
-  onJoin: (position: LinePosition, teamId: string) => void;
+  onJoin: (position: JoinPosition, teamId: string) => void;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(0);
@@ -73,63 +80,103 @@ export function PitchLineup({
     el.scrollTo({ left: i * el.clientWidth, behavior: 'smooth' });
   };
 
-  const Slot = ({ line, team, ti }: { line: LinePosition; team: Team; ti: number }) => {
-    const players = participants.filter(
-      (p) => p.teamId === team.id && p.preferredPosition === line,
-    );
-    const teamCount = participants.filter((p) => p.teamId === team.id).length;
-    const teamFull = teamCount >= playersPerTeam;
-    const empty = Math.max(0, formation[line] - players.length);
-    if (formation[line] <= 0) return null;
+  type Cell = { kind: 'player'; p: Participant } | { kind: 'empty'; key: string };
+
+  const PlayerChip = ({ p, ti }: { p: Participant; ti: number }) => (
+    <div className="flex w-16 flex-col items-center gap-1">
+      <PlayerAvatar
+        name={p.user.name}
+        url={p.user.avatarUrl}
+        className={cn(
+          'size-11 ring-2',
+          TEAM_RING[ti % TEAM_RING.length],
+          p.user.id === meId && 'ring-primary',
+        )}
+      />
+      <span className="max-w-16 truncate text-[11px] font-medium text-white">{p.user.name}</span>
+    </div>
+  );
+
+  const EmptySlot = ({
+    position,
+    team,
+    open,
+    label,
+  }: {
+    position: JoinPosition;
+    team: Team;
+    open: boolean;
+    label: string;
+  }) => (
+    <div className="flex w-16 flex-col items-center gap-1">
+      {open ? (
+        isLoggedIn ? (
+          <button
+            type="button"
+            disabled={joinPending}
+            onClick={() => onJoin(position, team.id)}
+            className="flex size-11 items-center justify-center rounded-full border-2 border-dashed border-white/60 text-white/80 transition hover:border-white hover:bg-white/10 disabled:opacity-50"
+            aria-label={`${team.name}: ${label}`}
+          >
+            <Plus className="size-5" />
+          </button>
+        ) : (
+          <Link
+            href="/login"
+            className="flex size-11 items-center justify-center rounded-full border-2 border-dashed border-white/60 text-white/80 hover:bg-white/10"
+            aria-label={`${team.name}: ${label}`}
+          >
+            <Plus className="size-5" />
+          </Link>
+        )
+      ) : (
+        <div className="size-11 rounded-full border-2 border-dashed border-white/25" aria-hidden />
+      )}
+      {position === 'GK' && <span className="text-[11px] text-white/70">{label}</span>}
+    </div>
+  );
+
+  const TeamHalf = ({ team, ti }: { team: Team; ti: number }) => {
+    const mine = participants.filter((p) => p.teamId === team.id);
+    const keepers = mine.filter((p) => p.preferredPosition === 'GK');
+    const outfield = mine.filter((p) => p.preferredPosition !== 'GK');
+    const open = canJoinBase && mine.length < playersPerTeam;
+
+    const outfieldCells: Cell[] = [
+      ...outfield.map((p) => ({ kind: 'player' as const, p })),
+      ...Array.from({ length: Math.max(0, playersPerTeam - 1 - outfield.length) }, (_, i) => ({
+        kind: 'empty' as const,
+        key: `empty-${i}`,
+      })),
+    ];
 
     return (
-      <div className="flex flex-wrap items-start justify-center gap-3">
-        {players.map((p) => (
-          <div key={p.id} className="flex w-16 flex-col items-center gap-1">
-            <PlayerAvatar
-              name={p.user.name}
-              url={p.user.avatarUrl}
-              className={cn(
-                'size-11 ring-2',
-                TEAM_RING[ti % TEAM_RING.length],
-                p.user.id === meId && 'ring-primary',
-              )}
-            />
-            <span className="max-w-16 truncate text-[11px] font-medium text-white">
-              {p.user.name}
-            </span>
+      <div className="relative flex flex-1 flex-col justify-evenly gap-3 pt-3">
+        <div className="flex justify-center gap-3">
+          {keepers.map((p) => (
+            <PlayerChip key={p.id} p={p} ti={ti} />
+          ))}
+          {keepers.length === 0 && (
+            <EmptySlot position="GK" team={team} open={open} label="Воротар" />
+          )}
+        </div>
+        {chunk(outfieldCells, OUTFIELD_PER_ROW).map((row, ri) => (
+          <div key={ri} className="flex justify-center gap-3">
+            {row.map((c) =>
+              c.kind === 'player' ? (
+                <PlayerChip key={c.p.id} p={c.p} ti={ti} />
+              ) : (
+                <EmptySlot
+                  key={c.key}
+                  position="MID"
+                  team={team}
+                  open={open}
+                  label="Польовий гравець"
+                />
+              ),
+            )}
           </div>
         ))}
-        {Array.from({ length: empty }).map((_, i) =>
-          canJoinBase && !teamFull ? (
-            isLoggedIn ? (
-              <button
-                key={i}
-                type="button"
-                disabled={joinPending}
-                onClick={() => onJoin(line, team.id)}
-                className="flex size-11 items-center justify-center rounded-full border-2 border-dashed border-white/60 text-white/80 transition hover:border-white hover:bg-white/10 disabled:opacity-50"
-                aria-label={`${team.name}: ${line} ${i + 1}`}
-              >
-                <Plus className="size-5" />
-              </button>
-            ) : (
-              <Link
-                key={i}
-                href="/login"
-                className="flex size-11 items-center justify-center rounded-full border-2 border-dashed border-white/60 text-white/80 hover:bg-white/10"
-              >
-                <Plus className="size-5" />
-              </Link>
-            )
-          ) : (
-            <div
-              key={i}
-              className="size-11 rounded-full border-2 border-dashed border-white/25"
-              aria-hidden
-            />
-          ),
-        )}
       </div>
     );
   };
@@ -208,11 +255,7 @@ export function PitchLineup({
                 className="pointer-events-none absolute left-1/2 top-3 h-4 w-16 -translate-x-1/2 rounded-t-sm border-2 border-b-0 border-white/70"
                 style={net}
               />
-              <div className="relative flex flex-1 flex-col justify-evenly gap-3 pt-3">
-                {ORDER.map((line) => (
-                  <Slot key={line} line={line} team={team} ti={ti} />
-                ))}
-              </div>
+              <TeamHalf team={team} ti={ti} />
             </div>
           </div>
         ))}

@@ -10,6 +10,11 @@ import { eventCapacity } from './capacity.js';
 
 const ACTIVE_STATUSES: ParticipantStatus[] = ['JOINED', 'ATTENDED'];
 
+/** Every team has exactly one goalkeeper slot; everyone else is an outfield player. */
+export const GOALKEEPERS_PER_TEAM = 1;
+/** Position stored for outfield players now that lines (DEF/MID/FWD) aren't picked. */
+export const OUTFIELD_POSITION: Position = 'MID';
+
 interface LockedEvent {
   id: string;
   status: EventStatus;
@@ -80,6 +85,21 @@ export async function joinEvent(prisma: PrismaClient, input: JoinInput): Promise
       });
       if (teamCount >= event.playersPerTeam) {
         throw new DomainError('INVALID_STATE', 'This team is full');
+      }
+
+      if (input.position === 'GK') {
+        const keepers = await tx.eventParticipant.count({
+          where: {
+            eventId: input.eventId,
+            teamId: input.teamId,
+            preferredPosition: 'GK',
+            status: { in: ACTIVE_STATUSES },
+            userId: { not: input.userId },
+          },
+        });
+        if (keepers >= GOALKEEPERS_PER_TEAM) {
+          throw new DomainError('INVALID_STATE', 'This team already has a goalkeeper');
+        }
       }
     }
 

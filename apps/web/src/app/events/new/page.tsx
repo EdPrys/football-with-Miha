@@ -1,12 +1,11 @@
 'use client';
 
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useMemo, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { trpc } from '@/lib/trpc';
 import { errorMessage } from '@/lib/errors';
-import { formationOptionsFor } from '@/lib/formation';
 import { BecomeOrganizer } from '@/components/become-organizer';
 import { AddVenueDialog } from '@/components/add-venue-dialog';
 import { Card } from '@/components/ui/card';
@@ -23,6 +22,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
+// "2 на 2" … "11 на 11"; mirrors MIN/MAX_PLAYERS_PER_TEAM in @app/domain.
+const TEAM_SIZES = Array.from({ length: 10 }, (_, i) => i + 2);
+
 export default function NewEventPage() {
   const router = useRouter();
   const me = trpc.auth.me.useQuery(undefined, { retry: false });
@@ -34,19 +36,6 @@ export default function NewEventPage() {
   const [endTime, setEndTime] = useState('22:00');
   const [numberOfTeams, setNumberOfTeams] = useState('2');
   const [playersPerTeam, setPlayersPerTeam] = useState('5');
-  const [formation, setFormation] = useState(formationOptionsFor(5)[0].key);
-
-  const formationOptions = useMemo(
-    () => formationOptionsFor(Number(playersPerTeam) || 1),
-    [playersPerTeam],
-  );
-
-  // Reset formation to the default whenever it no longer belongs to the current team size.
-  useEffect(() => {
-    if (!formationOptions.some((o) => o.key === formation)) {
-      setFormation(formationOptions[0].key);
-    }
-  }, [formationOptions, formation]);
 
   const create = trpc.events.create.useMutation({
     onSuccess: (d) => {
@@ -84,7 +73,6 @@ export default function NewEventPage() {
       endAt,
       numberOfTeams: Number(numberOfTeams),
       playersPerTeam: Number(playersPerTeam),
-      formation,
     });
   };
 
@@ -156,40 +144,21 @@ export default function NewEventPage() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="per">Гравців у команді</Label>
-              <Input
-                id="per"
-                type="number"
-                min={1}
-                value={playersPerTeam}
-                onChange={(e) => setPlayersPerTeam(e.target.value)}
-              />
-            </div>
-          </div>
-          {formationOptions.length > 1 && (
-            <div className="space-y-1.5">
-              <Label>Формація (захист-півзахист-напад)</Label>
-              <Select value={formation} onValueChange={(v) => v && setFormation(v)}>
+              <Label>Формат</Label>
+              <Select value={playersPerTeam} onValueChange={(v) => v && setPlayersPerTeam(v)}>
                 <SelectTrigger>
-                  <SelectValue>
-                    {(key: string) => {
-                      const o = formationOptions.find((x) => x.key === key);
-                      return o
-                        ? `${o.key} · воротар + ${o.slots.DEF}-${o.slots.MID}-${o.slots.FWD}`
-                        : key;
-                    }}
-                  </SelectValue>
+                  <SelectValue>{(n: string) => `${n} на ${n}`}</SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  {formationOptions.map((o) => (
-                    <SelectItem key={o.key} value={o.key}>
-                      {o.key} · воротар + {o.slots.DEF}-{o.slots.MID}-{o.slots.FWD}
+                  {TEAM_SIZES.map((n) => (
+                    <SelectItem key={n} value={String(n)}>
+                      {n} на {n}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-          )}
+          </div>
           <Button type="submit" className="w-full" disabled={create.isPending}>
             {create.isPending ? '...' : 'Створити'}
           </Button>

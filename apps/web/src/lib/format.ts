@@ -3,9 +3,10 @@ export type PositionValue = (typeof POSITIONS)[number];
 
 export const POSITION_LABEL: Record<PositionValue, string> = {
   GK: 'Воротар',
-  DEF: 'Захисник',
-  MID: 'Півзахисник',
-  FWD: 'Нападник',
+  // Lines aren't picked any more; legacy DEF/FWD rows read as outfield too.
+  DEF: 'Польовий гравець',
+  MID: 'Польовий гравець',
+  FWD: 'Польовий гравець',
 };
 
 const day = new Intl.DateTimeFormat('uk-UA', { weekday: 'short', day: 'numeric', month: 'short' });

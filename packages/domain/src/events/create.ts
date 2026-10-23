@@ -1,7 +1,6 @@
 import type { Event, PrismaClient } from '@app/db';
 import { DomainError } from '../errors.js';
 import { teamNames } from './team-names.js';
-import { defaultFormationKey, isValidFormationKey } from './formation.js';
 
 export interface CreateEventInput {
   organizerId: string;
@@ -10,12 +9,12 @@ export interface CreateEventInput {
   endAt: Date;
   numberOfTeams: number;
   playersPerTeam: number;
-  /** Formation key from formationOptionsFor(playersPerTeam); defaults to that size's default formation. */
-  formation?: string;
 }
 
 export const MIN_TEAMS = 2;
-export const MIN_PLAYERS_PER_TEAM = 1;
+// Game formats run from "2 на 2" to "11 на 11".
+export const MIN_PLAYERS_PER_TEAM = 2;
+export const MAX_PLAYERS_PER_TEAM = 11;
 
 /**
  * Creates an Event and its teams in one transaction. Enforces the invariants
@@ -25,17 +24,17 @@ export async function createEvent(prisma: PrismaClient, input: CreateEventInput)
   if (input.numberOfTeams < MIN_TEAMS) {
     throw new DomainError('VALIDATION', `An event needs at least ${MIN_TEAMS} teams`);
   }
-  if (input.playersPerTeam < MIN_PLAYERS_PER_TEAM) {
-    throw new DomainError('VALIDATION', 'playersPerTeam must be at least 1');
+  if (input.playersPerTeam < MIN_PLAYERS_PER_TEAM || input.playersPerTeam > MAX_PLAYERS_PER_TEAM) {
+    throw new DomainError(
+      'VALIDATION',
+      `playersPerTeam must be between ${MIN_PLAYERS_PER_TEAM} and ${MAX_PLAYERS_PER_TEAM}`,
+    );
   }
   if (input.endAt <= input.startAt) {
     throw new DomainError('VALIDATION', 'endAt must be after startAt');
   }
   if (input.startAt.getTime() < Date.now()) {
     throw new DomainError('VALIDATION', 'startAt must be in the future');
-  }
-  if (input.formation && !isValidFormationKey(input.playersPerTeam, input.formation)) {
-    throw new DomainError('VALIDATION', 'Invalid formation for this team size');
   }
 
   const field = await prisma.field.findUnique({ where: { id: input.fieldId } });
@@ -50,7 +49,6 @@ export async function createEvent(prisma: PrismaClient, input: CreateEventInput)
       endAt: input.endAt,
       numberOfTeams: input.numberOfTeams,
       playersPerTeam: input.playersPerTeam,
-      formation: input.formation ?? defaultFormationKey(input.playersPerTeam),
       teams: { create: teamNames(input.numberOfTeams).map((name) => ({ name })) },
     },
   });

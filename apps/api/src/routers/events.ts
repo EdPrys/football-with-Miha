@@ -8,6 +8,8 @@ import {
   finishEvent,
   cancelEvent,
   DomainError,
+  MIN_PLAYERS_PER_TEAM,
+  MAX_PLAYERS_PER_TEAM,
 } from '@app/domain';
 import { ParticipantStatus, Position, type Prisma } from '@app/db';
 import { router, publicProcedure, protectedProcedure, managerProcedure } from '../trpc.js';
@@ -25,8 +27,7 @@ export const eventsRouter = router({
         startAt: z.date(),
         endAt: z.date(),
         numberOfTeams: z.number().int().min(2),
-        playersPerTeam: z.number().int().min(1),
-        formation: z.string().min(1).optional(),
+        playersPerTeam: z.number().int().min(MIN_PLAYERS_PER_TEAM).max(MAX_PLAYERS_PER_TEAM),
       }),
     )
     .mutation(async ({ ctx, input }) => {
