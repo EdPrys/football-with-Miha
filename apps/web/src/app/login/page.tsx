@@ -4,6 +4,7 @@ import { useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { trpc } from '@/lib/trpc';
+import { errorMessage } from '@/lib/errors';
 import { setToken } from '@/lib/auth';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -17,6 +18,8 @@ export default function LoginPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const mismatch = mode === 'register' && confirm.length > 0 && confirm !== password;
 
   const done = async (token: string) => {
     setToken(token);
@@ -26,18 +29,19 @@ export default function LoginPage() {
   };
   const login = trpc.auth.login.useMutation({
     onSuccess: (d) => done(d.token),
-    onError: (e) => toast.error(e.message),
+    onError: (e) => toast.error(errorMessage(e)),
   });
   const register = trpc.auth.register.useMutation({
     onSuccess: (d) => done(d.token),
-    onError: (e) => toast.error(e.message),
+    onError: (e) => toast.error(errorMessage(e)),
   });
   const pending = login.isPending || register.isPending;
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    if (mode === 'login') login.mutate({ email, password });
-    else register.mutate({ name, email, password });
+    if (mode === 'login') return login.mutate({ email, password });
+    if (password !== confirm) return toast.error('Паролі не збігаються');
+    register.mutate({ name: name.trim(), email, password });
   };
 
   return (
@@ -71,9 +75,30 @@ export default function LoginPage() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
               required
             />
+            {mode === 'register' && (
+              <p className="text-xs text-muted-foreground">
+                Щонайменше 8 символів, хоча б одна літера і одна цифра
+              </p>
+            )}
           </div>
+          {mode === 'register' && (
+            <div className="space-y-1.5">
+              <Label htmlFor="confirm">Повторіть пароль</Label>
+              <Input
+                id="confirm"
+                type="password"
+                value={confirm}
+                onChange={(e) => setConfirm(e.target.value)}
+                autoComplete="new-password"
+                aria-invalid={mismatch}
+                required
+              />
+              {mismatch && <p className="text-xs text-destructive">Паролі не збігаються</p>}
+            </div>
+          )}
           <Button type="submit" className="w-full" disabled={pending}>
             {pending ? '...' : mode === 'login' ? 'Увійти' : 'Створити акаунт'}
           </Button>

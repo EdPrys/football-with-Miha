@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { trpc } from '@/lib/trpc';
+import { errorMessage } from '@/lib/errors';
 import { formationOptionsFor } from '@/lib/formation';
 import { Card } from '@/components/ui/card';
 import { Button, buttonVariants } from '@/components/ui/button';
@@ -50,7 +51,7 @@ export default function NewEventPage() {
       toast.success('Гру створено!');
       router.push(`/events/${d.id}`);
     },
-    onError: (e) => toast.error(e.message),
+    onError: (e) => toast.error(errorMessage(e)),
   });
 
   const fields = useMemo(

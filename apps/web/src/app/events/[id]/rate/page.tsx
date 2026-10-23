@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { trpc } from '@/lib/trpc';
+import { errorMessage } from '@/lib/errors';
 import { Card } from '@/components/ui/card';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -99,7 +100,7 @@ function RatingForm({
       toast.success(`Оцінку для ${name} збережено`);
       utils.ratings.rateableTargets.invalidate({ eventId });
     },
-    onError: (e) => toast.error(e.message),
+    onError: (e) => toast.error(errorMessage(e)),
   });
 
   return (

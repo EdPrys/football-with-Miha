@@ -2,10 +2,22 @@ import { z } from 'zod';
 import { Role } from '@app/db';
 import { router, protectedProcedure, adminProcedure } from '../trpc.js';
 
+// An avatar is either a link or a small inline image. Uploads are resized
+// client-side (~256px JPEG, a few dozen KB) and stored as a data URL, so no
+// file storage is needed yet; the cap keeps a rogue client from bloating rows.
+const AVATAR_DATA_URL_MAX = 300_000;
+const avatarInput = z.union([
+  z.string().url().max(2000).startsWith('https://'),
+  z
+    .string()
+    .max(AVATAR_DATA_URL_MAX)
+    .regex(/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/]+=*$/),
+]);
+
 export const usersRouter = router({
-  // Set or clear your avatar (image URL). Upload-from-device is future work.
+  // Set or clear your avatar: an https image link or an uploaded image (data URL).
   updateAvatar: protectedProcedure
-    .input(z.object({ avatarUrl: z.string().url().max(2000).nullable() }))
+    .input(z.object({ avatarUrl: avatarInput.nullable() }))
     .mutation(async ({ ctx, input }) => {
       await ctx.prisma.user.update({
         where: { id: ctx.user.id },

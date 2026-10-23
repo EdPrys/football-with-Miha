@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { toast } from 'sonner';
 import { Bell, Check, X, Mail, XCircle, Star } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
+import { errorMessage } from '@/lib/errors';
 import { Card } from '@/components/ui/card';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -34,7 +35,7 @@ export default function NotificationsPage() {
       toast.success(vars.accept ? 'Ти прийняв запрошення!' : 'Запрошення відхилено');
       utils.notifications.mine.invalidate();
     },
-    onError: (e) => toast.error(e.message),
+    onError: (e) => toast.error(errorMessage(e)),
   });
 
   useEffect(() => {
