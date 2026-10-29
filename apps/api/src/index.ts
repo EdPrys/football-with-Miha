@@ -1,6 +1,6 @@
 import { buildServer } from './server.js';
 import { env } from './env.js';
-import { startAutoFinishJob } from './jobs/auto-finish.js';
+import { startScheduler } from './jobs/scheduler.js';
 
 const app = buildServer();
 
@@ -11,7 +11,7 @@ app
   .listen({ port, host: '0.0.0.0' })
   .then((address) => {
     app.log.info(`API ready at ${address}`);
-    startAutoFinishJob(app.log);
+    startScheduler(app.log);
   })
   .catch((err) => {
     app.log.error(err);

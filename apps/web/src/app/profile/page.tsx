@@ -60,7 +60,11 @@ export default function ProfilePage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="flex flex-col items-center gap-1.5">
-            <AvatarEditor name={me.data.user.name} url={me.data.user.avatarUrl} />
+            <AvatarEditor
+              name={me.data.user.name}
+              url={me.data.user.avatarUrl}
+              mvpCount={p?.mvpCount}
+            />
             <StarRow stars={p?.stars} starClassName="size-3" />
           </div>
           <div>

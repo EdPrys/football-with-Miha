@@ -12,6 +12,7 @@ import {
   MAX_PLAYERS_PER_TEAM,
   ratingClosesAt,
   starSummariesFor,
+  mvpCountsFor,
 } from '@app/domain';
 import { ParticipantStatus, Position, type Prisma } from '@app/db';
 import { router, publicProcedure, protectedProcedure, managerProcedure } from '../trpc.js';
@@ -147,15 +148,16 @@ export const eventsRouter = router({
     if (!event) throw new DomainError('NOT_FOUND', 'Event not found');
 
     const capacity = eventCapacity(event);
-    const stars = await starSummariesFor(
-      ctx.prisma,
-      event.participants.map((p) => p.userId),
-    );
+    const userIds = event.participants.map((p) => p.userId);
+    const [stars, mvps] = await Promise.all([
+      starSummariesFor(ctx.prisma, userIds),
+      mvpCountsFor(ctx.prisma, userIds),
+    ]);
     return {
       ...event,
       participants: event.participants.map((p) => ({
         ...p,
-        user: { ...p.user, stars: stars.get(p.userId)! },
+        user: { ...p.user, stars: stars.get(p.userId)!, mvpCount: mvps.get(p.userId) ?? 0 },
       })),
       ratingClosesAt: ratingClosesAt(event.finishedAt),
       capacity,

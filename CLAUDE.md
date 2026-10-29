@@ -24,7 +24,7 @@ Build the MVP around this loop. Do NOT build future features (payments, AI team 
 1. **Domain logic never lives in tRPC procedures or route handlers.** Procedures validate input (zod) → call a `packages/domain` service → persist via Prisma → return. Keep procedures thin.
 2. **Skills are self-assessed; peers give stars.** Players set their six skills 1–100 themselves (`skills/self.ts`). After a game co-players may give each other one 1–5 star score; the shown rating is an isolated, swappable aggregation (`ratings/stars.ts` → `starAggregator`, plain average now). See `docs/SKILLS.md`.
 3. **Invariants are enforced in the domain layer**, not the UI: can't join a full/cancelled/finished event, can't join twice, can't rate yourself / non-participants, one rating per (event, rater, ratee), rating only within 24h after the game is finished (`Event.finishedAt`).
-4. **State machines** for Event, Participant, Invitation status transitions — centralize allowed transitions in domain, don't scatter status checks. Games still open 1h after `endAt` are closed by `finishOverdueEvents` (run every 5 min from `apps/api/src/jobs/auto-finish.ts`): finished like the button, or cancelled if nobody joined.
+4. **State machines** for Event, Participant, Invitation status transitions — centralize allowed transitions in domain, don't scatter status checks. Games still open 1h after `endAt` are closed by `finishOverdueEvents` (run every 5 min from `apps/api/src/jobs/scheduler.ts`): finished like the button, or cancelled if nobody joined.
 5. **Shared types come from packages** (`@app/db` Prisma types, `@app/domain` enums/DTOs). Don't redefine enums per app.
 6. Develop **vertically** (full loop first), not entity-by-entity.
 

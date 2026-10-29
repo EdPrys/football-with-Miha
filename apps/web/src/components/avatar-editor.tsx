@@ -42,7 +42,15 @@ async function toAvatarDataUrl(file: File): Promise<string> {
   return canvas.toDataURL('image/jpeg', 0.85);
 }
 
-export function AvatarEditor({ name, url }: { name: string; url: string | null }) {
+export function AvatarEditor({
+  name,
+  url,
+  mvpCount,
+}: {
+  name: string;
+  url: string | null;
+  mvpCount?: number;
+}) {
   const utils = trpc.useUtils();
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState(url ?? '');
@@ -85,7 +93,7 @@ export function AvatarEditor({ name, url }: { name: string; url: string | null }
         className="relative shrink-0"
         aria-label="Змінити аватар"
       >
-        <PlayerAvatar name={name} url={url} className="size-14" />
+        <PlayerAvatar name={name} url={url} mvpCount={mvpCount} className="size-14" />
         <span className="absolute -bottom-1 -right-1 rounded-full bg-primary p-1 text-primary-foreground">
           <Camera className="size-3" />
         </span>

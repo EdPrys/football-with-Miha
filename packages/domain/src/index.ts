@@ -14,6 +14,7 @@ export * from './events/lifecycle.js';
 export * from './events/manage.js';
 export * from './skills/self.js';
 export * from './ratings/stars.js';
+export * from './mvp/mvp.js';
 export * from './ratings/submit.js';
 export * from './players/attendance.js';
 export * from './notifications/create.js';

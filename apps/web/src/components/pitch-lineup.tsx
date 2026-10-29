@@ -11,7 +11,13 @@ type Participant = {
   id: string;
   preferredPosition: string;
   teamId: string | null;
-  user: { id: string; name: string; avatarUrl: string | null; stars?: StarSummary };
+  user: {
+    id: string;
+    name: string;
+    avatarUrl: string | null;
+    stars?: StarSummary;
+    mvpCount?: number;
+  };
 };
 type Team = { id: string; name: string };
 
@@ -88,6 +94,7 @@ export function PitchLineup({
       <PlayerAvatar
         name={p.user.name}
         url={p.user.avatarUrl}
+        mvpCount={p.user.mvpCount}
         className={cn(
           'size-11 ring-2',
           TEAM_RING[ti % TEAM_RING.length],

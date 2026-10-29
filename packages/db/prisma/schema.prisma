@@ -60,6 +60,7 @@ enum NotificationType {
   EVENT_CANCELLED
   EVENT_APPROACHING
   RATING_AVAILABLE
+  MVP_AWARDED
 }
 
 enum RoleRequestStatus {
@@ -88,6 +89,9 @@ model User {
   ratingsReceived  Rating[]          @relation("RatingRatee")
   notifications    Notification[]
   roleRequests     RoleRequest[]
+  mvpVotesGiven    MvpVote[]         @relation("MvpVoter")
+  mvpVotesReceived MvpVote[]         @relation("MvpNominee")
+  mvpAwards        EventMvp[]
 }
 
 // The "football profile". Aggregated skills are stored in PlayerSkill rows,
@@ -154,6 +158,8 @@ model Event {
   status         EventStatus @default(UPCOMING)
   // Set when the organizer finishes the game; star ratings close 24h later.
   finishedAt     DateTime?
+  // Set once MVP voting is closed and winners are written to EventMvp.
+  mvpResolvedAt  DateTime?
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
 
@@ -161,6 +167,8 @@ model Event {
   participants EventParticipant[]
   invitations  Invitation[]
   ratings      Rating[]
+  mvpVotes     MvpVote[]
+  mvps         EventMvp[]
 
   @@index([status, startAt])
   @@index([fieldId, startAt])
@@ -257,4 +265,32 @@ model RoleRequest {
   decidedAt DateTime?
 
   @@index([userId, status])
+}
+
+// One MVP vote per player per finished game (same 24h window as stars).
+model MvpVote {
+  id        String   @id @default(cuid())
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  voterId   String
+  voter     User     @relation("MvpVoter", fields: [voterId], references: [id], onDelete: Cascade)
+  nomineeId String
+  nominee   User     @relation("MvpNominee", fields: [nomineeId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([eventId, voterId])
+  @@index([nomineeId])
+}
+
+// MVP winner(s) of a game — several on a tie. A player's MVP count is the
+// number of rows here.
+model EventMvp {
+  eventId String
+  event   Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  userId  String
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  votes   Int
+
+  @@id([eventId, userId])
+  @@index([userId])
 }

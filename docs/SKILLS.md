@@ -45,3 +45,12 @@ export interface SkillAggregator {
 MVP: plain average rounded to 1 decimal (`[5,4,4] → 4.3`). Swap it for a
 Bayesian / recency-weighted version without touching callers. Summaries are
 computed on read (`starSummariesFor`), not stored.
+
+## MVP of the match
+
+Every ATTENDED player has one MVP vote per finished game (not for themselves),
+in the same 24h window as stars (`packages/domain/src/mvp/mvp.ts`). Most votes
+wins; on a tie every tied player is MVP. Voting closes early once all players
+voted, otherwise the scheduler (`resolveDueMvps`) closes it after 24h. Winners
+are rows in `EventMvp`; a player's MVP count = number of their rows, shown as a
+👑N badge on the avatar.

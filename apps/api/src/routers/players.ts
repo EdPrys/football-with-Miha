@@ -7,6 +7,7 @@ import {
   MIN_SKILL,
   setOwnSkills,
   starSummariesFor,
+  mvpCountsFor,
 } from '@app/domain';
 import { router, publicProcedure, protectedProcedure } from '../trpc.js';
 
@@ -44,8 +45,9 @@ export const playersRouter = router({
       });
       if (!user) throw new DomainError('NOT_FOUND', 'Player not found');
 
-      const [stars, attended, noShow] = await Promise.all([
+      const [stars, mvps, attended, noShow] = await Promise.all([
         starSummariesFor(ctx.prisma, [input.userId]),
+        mvpCountsFor(ctx.prisma, [input.userId]),
         ctx.prisma.eventParticipant.count({ where: { userId: input.userId, status: 'ATTENDED' } }),
         ctx.prisma.eventParticipant.count({ where: { userId: input.userId, status: 'NO_SHOW' } }),
       ]);
@@ -58,6 +60,7 @@ export const playersRouter = router({
         bio: user.profile?.bio ?? null,
         skills: user.profile?.skills ?? [],
         stars: stars.get(input.userId)!,
+        mvpCount: mvps.get(input.userId) ?? 0,
         matchesPlayed: attended,
         attendance: attendancePercent({ attended, noShow }),
       };

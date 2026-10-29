@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import Link from 'next/link';
 import { toast } from 'sonner';
-import { Bell, Check, X, Mail, XCircle, Star } from 'lucide-react';
+import { Bell, Check, X, Mail, XCircle, Star, Crown } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import { errorMessage } from '@/lib/errors';
 import { Card } from '@/components/ui/card';
@@ -20,6 +20,7 @@ const ICON: Record<string, typeof Mail> = {
   INVITATION_ACCEPTED: Check,
   EVENT_CANCELLED: XCircle,
   RATING_AVAILABLE: Star,
+  MVP_AWARDED: Crown,
 };
 
 export default function NotificationsPage() {
@@ -95,8 +96,9 @@ export default function NotificationsPage() {
                   )}
                   {n.type === 'EVENT_CANCELLED' && <p className="text-sm">Гру скасовано</p>}
                   {n.type === 'RATING_AVAILABLE' && (
-                    <p className="text-sm">Гру завершено — постав оцінки гравцям</p>
+                    <p className="text-sm">Гру завершено — постав оцінки й обери MVP</p>
                   )}
+                  {n.type === 'MVP_AWARDED' && <p className="text-sm">👑 Тебе обрали MVP матчу!</p>}
                   {eventStartAt && (
                     <p className="text-xs text-muted-foreground">
                       {formatDate(new Date(eventStartAt))} · {formatTime(new Date(eventStartAt))}

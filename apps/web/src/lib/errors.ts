@@ -14,6 +14,12 @@ const MESSAGES: Record<string, string> = {
   'Rating is closed 24 hours after the game': 'Оцінювати можна лише протягом доби після гри',
   'Stars must be from 1 to 5': 'Оцінка — від 1 до 5 зірок',
   'Each skill must be from 1 to 100': 'Кожна навичка — від 1 до 100',
+  'You cannot vote for yourself': 'За себе голосувати не можна',
+  'MVP voting opens after the event is finished': 'Голосування за MVP відкриється після гри',
+  'MVP voting is closed': 'Голосування за MVP вже закрите',
+  'Only players of this match can vote and be voted for':
+    'Голосувати й отримувати голоси можуть лише гравці цього матчу',
+  'You already voted for MVP in this match': 'Ти вже проголосував за MVP у цьому матчі',
   'You have already joined this event': 'Ти вже записаний на цю гру',
   'Only the organizer can manage this event': 'Керувати грою може лише організатор',
   'Only the organizer or a participant can invite others':

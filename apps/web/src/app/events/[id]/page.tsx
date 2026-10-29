@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { PitchLineup } from '@/components/pitch-lineup';
+import { MvpCard } from '@/components/mvp-card';
 import { PlayerAvatar } from '@/components/player-avatar';
 import { formatDate, formatRange, POSITION_LABEL, type PositionValue } from '@/lib/format';
 
@@ -106,6 +107,8 @@ export default function EventPage() {
           </div>
           <p className="text-xs text-muted-foreground">Організатор: {e.organizer.name}</p>
         </Card>
+
+        {e.status === 'FINISHED' && <MvpCard eventId={e.id} className="order-2" />}
 
         {canRate && (
           <Link href={`/events/${e.id}/rate`} className={cn(buttonVariants(), 'order-2 w-full')}>
