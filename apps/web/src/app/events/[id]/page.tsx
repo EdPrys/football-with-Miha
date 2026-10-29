@@ -6,6 +6,7 @@ import { CalendarDays, MapPin, Users, Star } from 'lucide-react';
 import { toast } from 'sonner';
 import { trpc } from '@/lib/trpc';
 import { errorMessage } from '@/lib/errors';
+import { track } from '@/lib/analytics';
 import { Card } from '@/components/ui/card';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -28,6 +29,7 @@ export default function EventPage() {
 
   const join = trpc.events.join.useMutation({
     onSuccess: () => {
+      track('join_event');
       toast.success('Ти в грі!');
       refresh();
     },

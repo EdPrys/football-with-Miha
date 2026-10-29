@@ -25,6 +25,13 @@ export const authRouter = router({
         name: z.string().min(1).max(80),
         email: z.string().email(),
         password: z.string(),
+        attribution: z
+          .object({
+            source: z.string().min(1).max(100),
+            medium: z.string().max(100).optional(),
+            campaign: z.string().max(200).optional(),
+          })
+          .optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -34,6 +41,7 @@ export const authRouter = router({
         name: input.name,
         email: input.email,
         passwordHash,
+        attribution: input.attribution,
       });
       return { token: signToken(user.id), user: publicUser(user) };
     }),

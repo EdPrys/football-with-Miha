@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { trpc } from '@/lib/trpc';
 import { errorMessage } from '@/lib/errors';
 import { setToken } from '@/lib/auth';
+import { getAttribution, track } from '@/lib/analytics';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,6 +22,11 @@ export default function LoginPage() {
   const [confirm, setConfirm] = useState('');
   const mismatch = mode === 'register' && confirm.length > 0 && confirm !== password;
 
+  // Landing/ad links open straight on signup via /login?mode=register.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('mode') === 'register') setMode('register');
+  }, []);
+
   const done = async (token: string) => {
     setToken(token);
     await utils.invalidate();
@@ -28,11 +34,17 @@ export default function LoginPage() {
     router.push('/profile');
   };
   const login = trpc.auth.login.useMutation({
-    onSuccess: (d) => done(d.token),
+    onSuccess: (d) => {
+      track('login');
+      return done(d.token);
+    },
     onError: (e) => toast.error(errorMessage(e)),
   });
   const register = trpc.auth.register.useMutation({
-    onSuccess: (d) => done(d.token),
+    onSuccess: (d) => {
+      track('sign_up');
+      return done(d.token);
+    },
     onError: (e) => toast.error(errorMessage(e)),
   });
   const pending = login.isPending || register.isPending;
@@ -41,14 +53,14 @@ export default function LoginPage() {
     e.preventDefault();
     if (mode === 'login') return login.mutate({ email, password });
     if (password !== confirm) return toast.error('Паролі не збігаються');
-    register.mutate({ name: name.trim(), email, password });
+    register.mutate({ name: name.trim(), email, password, attribution: getAttribution() });
   };
 
   return (
     <div className="mx-auto max-w-sm space-y-6 pt-6">
       <div className="text-center">
         <h1 className="text-2xl font-bold">{mode === 'login' ? 'Вхід' : 'Реєстрація'}</h1>
-        <p className="text-sm text-muted-foreground">Football pickup games</p>
+        <p className="text-sm text-muted-foreground">Kopanka — футбол поруч</p>
       </div>
       <Card className="p-5">
         <form onSubmit={submit} className="space-y-4">

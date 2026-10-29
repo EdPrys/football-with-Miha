@@ -64,7 +64,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="mx-auto flex h-14 max-w-md items-center justify-between px-4 md:h-16 md:max-w-6xl md:px-6">
           <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight">
             <Logo className="size-6 text-foreground" />
-            Football
+            Kopanka
           </Link>
 
           {/* Desktop nav — the bottom tab bar takes over below md */}

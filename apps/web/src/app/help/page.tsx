@@ -19,7 +19,7 @@ import { buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 export const metadata: Metadata = {
-  title: 'Як це працює — Football',
+  title: 'Як це працює',
   description: 'Як знайти гру, зайняти позицію на полі, зіграти й оцінити гравців.',
 };
 

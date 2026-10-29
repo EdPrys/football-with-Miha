@@ -7,6 +7,7 @@ export interface RegisterInput {
   email: string;
   passwordHash: string;
   avatarUrl?: string;
+  attribution?: { source: string; medium?: string; campaign?: string };
 }
 
 /**
@@ -27,6 +28,9 @@ export async function createUserWithProfile(
       email: input.email,
       passwordHash: input.passwordHash,
       avatarUrl: input.avatarUrl,
+      signupSource: input.attribution?.source,
+      signupMedium: input.attribution?.medium,
+      signupCampaign: input.attribution?.campaign,
       profile: {
         create: {
           skills: {

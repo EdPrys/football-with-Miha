@@ -80,6 +80,10 @@ model User {
   // Home city ("базування"); organizers invite players from the game's city.
   cityId       String   @default("kyiv")
   city         City     @relation(fields: [cityId], references: [id])
+  // Where the signup came from (utm_* or ad click ids), for measuring ads.
+  signupSource   String?
+  signupMedium   String?
+  signupCampaign String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { trpc } from '@/lib/trpc';
 import { errorMessage } from '@/lib/errors';
+import { track } from '@/lib/analytics';
 import { BecomeOrganizer } from '@/components/become-organizer';
 import { AddVenueDialog } from '@/components/add-venue-dialog';
 import { InvitePlayers } from '@/components/invite-players';
@@ -45,6 +46,7 @@ export default function NewEventPage() {
 
   const create = trpc.events.create.useMutation({
     onSuccess: (d) => {
+      track('create_event');
       toast.success(d.invited ? `Гру створено! Запрошено гравців: ${d.invited}` : 'Гру створено!');
       router.push(`/events/${d.id}`);
     },

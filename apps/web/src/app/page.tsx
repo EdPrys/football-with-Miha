@@ -9,12 +9,17 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { formatDate, formatRange } from '@/lib/format';
+import { WelcomeHero } from '@/components/welcome-hero';
 
 export default function DiscoverPage() {
   const { data, isLoading } = trpc.events.list.useQuery({});
+  const me = trpc.auth.me.useQuery(undefined, { retry: false });
+  const guest = !me.isLoading && !me.data;
 
   return (
     <div className="space-y-4 md:space-y-6">
+      {guest && <WelcomeHero />}
+
       <div className="flex items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Знайти гру</h1>
