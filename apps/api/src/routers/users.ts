@@ -2,10 +2,16 @@ import { z } from 'zod';
 import { Role } from '@app/db';
 import { requestOrganizerRole, setUserCity } from '@app/domain';
 import { router, protectedProcedure, adminProcedure } from '../trpc.js';
+import {
+  avatarStorageEnabled,
+  deleteStoredAvatar,
+  storeAvatar,
+} from '../integrations/avatar-storage.js';
 
-// An avatar is either a link or a small inline image. Uploads are resized
-// client-side (~256px JPEG, a few dozen KB) and stored as a data URL, so no
-// file storage is needed yet; the cap keeps a rogue client from bloating rows.
+// An avatar is either a link or a small uploaded image. Uploads are resized
+// client-side (~256px JPEG, a few dozen KB) and sent as a data URL; with avatar
+// storage configured they go to the bucket, otherwise they're kept inline.
+// The cap keeps a rogue client from sending huge images.
 const AVATAR_DATA_URL_MAX = 300_000;
 const avatarInput = z.union([
   z.string().url().max(2000).startsWith('https://'),
@@ -20,10 +26,14 @@ export const usersRouter = router({
   updateAvatar: protectedProcedure
     .input(z.object({ avatarUrl: avatarInput.nullable() }))
     .mutation(async ({ ctx, input }) => {
-      await ctx.prisma.user.update({
-        where: { id: ctx.user.id },
-        data: { avatarUrl: input.avatarUrl },
-      });
+      const avatarUrl =
+        input.avatarUrl?.startsWith('data:') && avatarStorageEnabled
+          ? await storeAvatar(ctx.user.id, input.avatarUrl)
+          : input.avatarUrl;
+      await ctx.prisma.user.update({ where: { id: ctx.user.id }, data: { avatarUrl } });
+      if (ctx.user.avatarUrl !== avatarUrl) {
+        await deleteStoredAvatar(ctx.user.avatarUrl).catch(() => {});
+      }
       return { ok: true };
     }),
 

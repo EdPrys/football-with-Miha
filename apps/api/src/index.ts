@@ -1,6 +1,7 @@
 import { buildServer } from './server.js';
 import { env } from './env.js';
 import { startScheduler } from './jobs/scheduler.js';
+import { moveInlineAvatars } from './jobs/move-inline-avatars.js';
 
 const app = buildServer();
 
@@ -12,6 +13,7 @@ app
   .then((address) => {
     app.log.info(`API ready at ${address}`);
     startScheduler(app.log);
+    void moveInlineAvatars(app.log).catch((err) => app.log.error(err, 'avatars: move failed'));
   })
   .catch((err) => {
     app.log.error(err);
