@@ -27,7 +27,7 @@ export function CitySelect({
     <Select value={value} onValueChange={(v) => v && onChange(v)} disabled={disabled}>
       <SelectTrigger className={className}>
         <SelectValue placeholder="Оберіть місто">
-          {(id: string) => cities.data?.find((c) => c.id === id)?.name ?? null}
+          {(id: string) => cities.data?.find((c) => c.id === id)?.name ?? 'Оберіть місто'}
         </SelectValue>
       </SelectTrigger>
       <SelectContent>

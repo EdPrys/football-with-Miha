@@ -33,7 +33,9 @@ export default function NewEventPage() {
   const venues = trpc.venues.list.useQuery();
 
   const [fieldId, setFieldId] = useState('');
-  const [date, setDate] = useState('');
+  // iOS shows an empty date input as a blank box, so start from today.
+  const today = new Date().toLocaleDateString('sv-SE'); // YYYY-MM-DD, local time
+  const [date, setDate] = useState(today);
   const [startTime, setStartTime] = useState('20:00');
   const [endTime, setEndTime] = useState('22:00');
   const [numberOfTeams, setNumberOfTeams] = useState('2');
@@ -101,13 +103,14 @@ export default function NewEventPage() {
       <Card className="p-5">
         <form onSubmit={submit} className="space-y-4">
           <div className="space-y-1.5">
-            <Label>Поле</Label>
+            <Label>Де граємо</Label>
             <Select value={fieldId} onValueChange={(v) => setFieldId(v ?? '')}>
-              <SelectTrigger>
-                <SelectValue placeholder="Оберіть поле">
+              <SelectTrigger className={cn(!fieldId && 'border-primary/60')}>
+                <SelectValue placeholder="Оберіть стадіон і поле">
                   {(id: string) => {
                     const f = fields.find((x) => x.id === id);
-                    return f ? `${f.venue} · ${f.name}` : null;
+                    // Base UI calls this even with no value, hiding the placeholder.
+                    return f ? `${f.venue} · ${f.name}` : 'Оберіть стадіон і поле';
                   }}
                 </SelectValue>
               </SelectTrigger>
@@ -126,6 +129,7 @@ export default function NewEventPage() {
             <Input
               id="date"
               type="date"
+              min={today}
               value={date}
               onChange={(e) => setDate(e.target.value)}
               required

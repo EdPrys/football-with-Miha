@@ -97,7 +97,7 @@ export default function ProfilePage() {
         <div className="space-y-5">
           <div className="grid grid-cols-3 gap-3">
             <Stat label="Матчі" value={p ? String(p.matchesPlayed) : '—'} />
-            <Stat label="Відвідуваність" value={p?.attendance != null ? `${p.attendance}%` : '—'} />
+            <Stat label="Явка" value={p?.attendance != null ? `${p.attendance}%` : '—'} />
             <Stat
               label={p?.stars.count ? `Рейтинг · ${p.stars.count}` : 'Рейтинг'}
               value={p?.stars.average != null ? `★ ${p.stars.average.toFixed(1)}` : '—'}
@@ -150,13 +150,13 @@ function CityCard({ cityId }: { cityId: string }) {
     <Card className="flex flex-row items-center justify-between gap-3 p-3">
       <div className="flex items-center gap-2 text-sm">
         <MapPin className="size-4 text-muted-foreground" />
-        <span>Моє місто</span>
+        <span className="whitespace-nowrap">Моє місто</span>
       </div>
       <CitySelect
         value={cityId}
         onChange={(id) => id !== cityId && update.mutate({ cityId: id })}
         disabled={update.isPending}
-        className="w-48"
+        className="w-auto min-w-0 max-w-48 flex-1"
       />
     </Card>
   );

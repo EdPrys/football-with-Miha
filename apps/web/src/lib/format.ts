@@ -15,4 +15,11 @@ const time = new Intl.DateTimeFormat('uk-UA', { hour: '2-digit', minute: '2-digi
 export const formatDate = (d: Date) => day.format(new Date(d));
 export const formatTime = (d: Date) => time.format(new Date(d));
 export const formatRange = (a: Date, b: Date) => `${formatTime(a)}–${formatTime(b)}`;
+export const EVENT_STATUS_LABEL: Record<string, string> = {
+  UPCOMING: 'Запланована',
+  IN_PROGRESS: 'Триває',
+  FINISHED: 'Зіграна',
+  CANCELLED: 'Скасована',
+};
+
 export const formatFormat = (teams: number, per: number) => `${per} на ${per} · ${teams} команди`;

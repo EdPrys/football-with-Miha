@@ -17,7 +17,13 @@ import { PitchLineup } from '@/components/pitch-lineup';
 import { MvpCard } from '@/components/mvp-card';
 import { PlayerAvatar } from '@/components/player-avatar';
 import { InviteDialog } from '@/components/invite-dialog';
-import { formatDate, formatRange, POSITION_LABEL, type PositionValue } from '@/lib/format';
+import {
+  EVENT_STATUS_LABEL,
+  formatDate,
+  formatRange,
+  POSITION_LABEL,
+  type PositionValue,
+} from '@/lib/format';
 
 export default function EventPage() {
   const { id } = useParams<{ id: string }>();
@@ -129,7 +135,7 @@ export default function EventPage() {
               <Users className="mr-1 size-3" />
               {e.joinedCount}/{e.capacity}
             </Badge>
-            <Badge variant="outline">{e.status}</Badge>
+            <Badge variant="outline">{EVENT_STATUS_LABEL[e.status] ?? e.status}</Badge>
           </div>
           <p className="text-xs text-muted-foreground">Організатор: {e.organizer.name}</p>
         </Card>

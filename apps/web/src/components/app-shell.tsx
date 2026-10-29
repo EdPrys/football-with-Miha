@@ -125,7 +125,8 @@ export function AppShell({ children }: { children: ReactNode }) {
                 key={t.href}
                 href={t.href}
                 className={cn(
-                  'relative flex flex-col items-center gap-1 py-2.5 text-xs transition-colors',
+                  // 5 tabs on a 320px phone: smaller labels so they don't touch.
+                  'relative flex min-w-0 flex-col items-center gap-1 py-2.5 text-[10px] transition-colors min-[360px]:text-xs',
                   active ? 'text-primary' : 'text-muted-foreground hover:text-foreground',
                 )}
               >
