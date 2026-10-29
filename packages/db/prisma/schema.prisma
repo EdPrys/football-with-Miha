@@ -185,6 +185,8 @@ model Event {
   finishedAt     DateTime?
   // Set once MVP voting is closed and winners are written to EventMvp.
   mvpResolvedAt  DateTime?
+  // The channel post announcing the game, removed when the game is deleted.
+  telegramMessageId Int?
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
 

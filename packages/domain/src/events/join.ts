@@ -6,7 +6,8 @@ import type {
   PrismaClient,
 } from '@app/db';
 import { DomainError } from '../errors.js';
-import { eventCapacity } from './capacity.js';
+import { canAddTeam, eventCapacity, MAX_TEAMS } from './capacity.js';
+import { teamNames } from './team-names.js';
 
 const ACTIVE_STATUSES: ParticipantStatus[] = ['JOINED', 'ATTENDED'];
 
@@ -42,11 +43,40 @@ export function assertJoinable(ctx: JoinGuardContext): void {
   }
 }
 
+type Tx = Parameters<Parameters<PrismaClient['$transaction']>[0]>[0];
+
+/**
+ * Adds the next team ("Team C", "Team D") to a full game and returns its id.
+ * Runs under the event row lock, so two players can't open two teams at once.
+ */
+async function openNextTeam(tx: Tx, event: LockedEvent, userId: string): Promise<string> {
+  if (event.status !== 'UPCOMING') {
+    throw new DomainError('INVALID_STATE', 'Event is not open for joining');
+  }
+  const activeCount = await tx.eventParticipant.count({
+    where: { eventId: event.id, status: { in: ACTIVE_STATUSES }, userId: { not: userId } },
+  });
+  if (event.numberOfTeams >= MAX_TEAMS) {
+    throw new DomainError('INVALID_STATE', 'This game already has the maximum number of teams');
+  }
+  if (!canAddTeam(event, activeCount)) {
+    throw new DomainError('INVALID_STATE', 'There are still free places in the current teams');
+  }
+  const name = teamNames(event.numberOfTeams + 1).at(-1)!;
+  const team = await tx.team.create({ data: { eventId: event.id, name } });
+  await tx.event.update({
+    where: { id: event.id },
+    data: { numberOfTeams: event.numberOfTeams + 1 },
+  });
+  return team.id;
+}
+
 export interface JoinInput {
   eventId: string;
   userId: string;
   position: Position;
   teamId?: string | null; // pick a specific team's slot on the pitch
+  newTeam?: boolean; // every slot is taken: open the next team and join it
 }
 
 /**
@@ -68,9 +98,13 @@ export async function joinEvent(prisma: PrismaClient, input: JoinInput): Promise
     `;
     if (!event) throw new DomainError('NOT_FOUND', 'Event not found');
 
-    if (input.teamId != null) {
+    let teamId = input.teamId ?? null;
+    if (input.newTeam) {
+      teamId = await openNextTeam(tx, event, input.userId);
+      event.numberOfTeams += 1;
+    } else if (teamId != null) {
       const team = await tx.team.findFirst({
-        where: { id: input.teamId, eventId: input.eventId },
+        where: { id: teamId, eventId: input.eventId },
         select: { id: true },
       });
       if (!team) throw new DomainError('VALIDATION', 'Team does not belong to this event');
@@ -78,7 +112,7 @@ export async function joinEvent(prisma: PrismaClient, input: JoinInput): Promise
       const teamCount = await tx.eventParticipant.count({
         where: {
           eventId: input.eventId,
-          teamId: input.teamId,
+          teamId,
           status: { in: ACTIVE_STATUSES },
           userId: { not: input.userId },
         },
@@ -91,7 +125,7 @@ export async function joinEvent(prisma: PrismaClient, input: JoinInput): Promise
         const keepers = await tx.eventParticipant.count({
           where: {
             eventId: input.eventId,
-            teamId: input.teamId,
+            teamId,
             preferredPosition: 'GK',
             status: { in: ACTIVE_STATUSES },
             userId: { not: input.userId },
@@ -126,7 +160,7 @@ export async function joinEvent(prisma: PrismaClient, input: JoinInput): Promise
     const data = {
       status: 'JOINED' as const,
       preferredPosition: input.position,
-      teamId: input.teamId ?? null,
+      teamId,
     };
 
     if (existing) {

@@ -54,6 +54,15 @@ const MESSAGES: Record<string, string> = {
   'playersPerTeam must be between 2 and 11': 'Формат гри — від 2 на 2 до 11 на 11',
   'This team already has a goalkeeper': 'У цій команді вже є воротар',
   'startAt must be in the future': 'Час початку має бути в майбутньому',
+  'This game already has the maximum number of teams': 'У цій грі вже максимум — 4 команди',
+  'There are still free places in the current teams':
+    'У командах ще є вільні місця — займи одне з них',
+  'A finished game cannot be deleted': 'Зіграну гру видалити не можна',
+  'Only a game nobody has joined can be deleted':
+    'Видалити можна лише гру, до якої ще ніхто не приєднався. Скасуй її натомість.',
+  'Teams can only be balanced before the game starts':
+    'Збалансувати команди можна лише до початку гри',
+  'Not enough players to balance teams': 'Для балансу потрібно хоча б двоє гравців',
 };
 
 const FIELD_ERRORS: Record<string, string> = {

@@ -66,11 +66,15 @@ export default function DiscoverPage() {
                   </div>
                 </div>
                 <Badge
-                  variant={e.availableSlots > 0 ? 'default' : 'secondary'}
+                  variant={e.availableSlots > 0 || e.canAddTeam ? 'default' : 'secondary'}
                   className="shrink-0"
                 >
                   <Users className="mr-1 size-3" />
-                  {e.availableSlots > 0 ? `${e.availableSlots} вільно` : 'Повна'}
+                  {e.availableSlots > 0
+                    ? `${e.availableSlots} вільно`
+                    : e.canAddTeam
+                      ? 'Нова команда'
+                      : 'Повна'}
                 </Badge>
               </div>
             </Card>

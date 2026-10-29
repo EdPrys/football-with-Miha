@@ -145,3 +145,36 @@ export async function cancelEvent(prisma: PrismaClient, input: ManageInput): Pro
 
   return updated;
 }
+
+/**
+ * The organizer removes a game nobody has joined (e.g. created by mistake).
+ * Runs under the event row lock so a player can't join while it's deleted.
+ * Returns the Telegram post id so the caller can take the announcement down.
+ */
+export async function deleteEvent(
+  prisma: PrismaClient,
+  input: ManageInput,
+): Promise<{ telegramMessageId: number | null }> {
+  await loadOwnedEvent(prisma, input.eventId, input.organizerId);
+  return prisma.$transaction(async (tx) => {
+    const [event] = await tx.$queryRaw<{ status: EventStatus; telegramMessageId: number | null }[]>`
+      SELECT status, "telegramMessageId" FROM "Event" WHERE id = ${input.eventId} FOR UPDATE
+    `;
+    if (!event) throw new DomainError('NOT_FOUND', 'Event not found');
+    if (event.status === 'FINISHED') {
+      throw new DomainError('INVALID_STATE', 'A finished game cannot be deleted');
+    }
+    const players = await tx.eventParticipant.count({
+      where: { eventId: input.eventId, status: { in: ACTIVE_STATUSES } },
+    });
+    if (players > 0) {
+      throw new DomainError('INVALID_STATE', 'Only a game nobody has joined can be deleted');
+    }
+    // Invite notifications would otherwise link to a missing game.
+    await tx.notification.deleteMany({
+      where: { payload: { path: ['eventId'], equals: input.eventId } },
+    });
+    await tx.event.delete({ where: { id: input.eventId } });
+    return { telegramMessageId: event.telegramMessageId };
+  });
+}

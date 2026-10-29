@@ -12,6 +12,7 @@ export * from './events/join.js';
 export * from './events/leave.js';
 export * from './events/lifecycle.js';
 export * from './events/manage.js';
+export * from './events/balance.js';
 export * from './skills/self.js';
 export * from './ratings/stars.js';
 export * from './mvp/mvp.js';

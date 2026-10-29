@@ -1,8 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
-import { CalendarDays, MapPin, Users, Star } from 'lucide-react';
+import { useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import { CalendarDays, MapPin, Users, Star, Scale, Trash2, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { trpc } from '@/lib/trpc';
 import { errorMessage } from '@/lib/errors';
@@ -20,7 +21,9 @@ import { formatDate, formatRange, POSITION_LABEL, type PositionValue } from '@/l
 
 export default function EventPage() {
   const { id } = useParams<{ id: string }>();
+  const router = useRouter();
   const utils = trpc.useUtils();
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const ev = trpc.events.get.useQuery({ id });
   const me = trpc.auth.me.useQuery(undefined, { retry: false });
 
@@ -63,6 +66,21 @@ export default function EventPage() {
     },
     onError: onErr,
   });
+  const balance = trpc.events.balanceTeams.useMutation({
+    onSuccess: () => {
+      toast.success('Команди збалансовано за зірками');
+      refresh();
+    },
+    onError: onErr,
+  });
+  const remove = trpc.events.delete.useMutation({
+    onSuccess: async () => {
+      toast('Гру видалено');
+      await Promise.all([utils.events.list.invalidate(), utils.events.mine.invalidate()]);
+      router.push('/my');
+    },
+    onError: onErr,
+  });
   if (ev.isLoading) return <Skeleton className="h-96 w-full rounded-xl" />;
   if (ev.error || !ev.data) return <Card className="p-8 text-center text-sm">Гру не знайдено</Card>;
 
@@ -76,6 +94,9 @@ export default function EventPage() {
   const canJoin = e.status === 'UPCOMING' && !mine && !full;
   // Mirrors inviteToEvent: the organizer or anyone already in the game can invite.
   const canInvite = e.status === 'UPCOMING' && (isOrganizer || !!mine);
+  // Every slot is taken: the next player can open another team (up to 4).
+  const canOpenTeam = e.canAddTeam && !mine;
+  const canDelete = isOrganizer && e.joinedCount === 0 && e.status !== 'FINISHED';
 
   // Mobile: one column in the original order (aside is `display: contents`, so its
   // children flow into the outer flex and `order-*` interleaves them with the pitch).
@@ -137,6 +158,41 @@ export default function EventPage() {
           </Card>
         )}
 
+        {canOpenTeam && (
+          <Card className="order-4 space-y-3 p-4">
+            <div>
+              <p className="text-sm font-semibold">Усі команди заповнені</p>
+              <p className="text-xs text-muted-foreground">
+                Відкрий {e.teams.length + 1}-у команду і стань у ній першим — решта гравців зможуть
+                доєднатися до тебе.
+              </p>
+            </div>
+            {me.data ? (
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  disabled={join.isPending}
+                  onClick={() => join.mutate({ eventId: e.id, position: 'GK', newTeam: true })}
+                >
+                  <Plus className="mr-1 size-4" /> Воротар
+                </Button>
+                <Button
+                  className="flex-1"
+                  disabled={join.isPending}
+                  onClick={() => join.mutate({ eventId: e.id, position: 'MID', newTeam: true })}
+                >
+                  <Plus className="mr-1 size-4" /> Польовий
+                </Button>
+              </div>
+            ) : (
+              <Link href="/login?mode=register" className={cn(buttonVariants(), 'w-full')}>
+                Зареєструватись і грати
+              </Link>
+            )}
+          </Card>
+        )}
+
         {canInvite && (
           <InviteDialog
             eventId={e.id}
@@ -160,6 +216,16 @@ export default function EventPage() {
         {isOrganizer && e.status !== 'FINISHED' && e.status !== 'CANCELLED' && (
           <Card className="order-6 space-y-3 p-4">
             <p className="text-sm font-semibold text-muted-foreground">Керування (організатор)</p>
+            {e.status === 'UPCOMING' && e.joinedCount >= 2 && (
+              <Button
+                variant="secondary"
+                className="w-full"
+                disabled={balance.isPending}
+                onClick={() => balance.mutate({ eventId: e.id })}
+              >
+                <Scale className="mr-1 size-4" /> Збалансувати команди за зірками
+              </Button>
+            )}
             <div className="flex gap-2">
               {e.status === 'UPCOMING' && (
                 <Button
@@ -189,6 +255,21 @@ export default function EventPage() {
               </Button>
             </div>
           </Card>
+        )}
+
+        {/* Only an empty game can go away entirely (e.g. created by mistake). */}
+        {canDelete && (
+          <Button
+            variant={confirmDelete ? 'destructive' : 'ghost'}
+            className="order-6 w-full"
+            disabled={remove.isPending}
+            onClick={() =>
+              confirmDelete ? remove.mutate({ eventId: e.id }) : setConfirmDelete(true)
+            }
+          >
+            <Trash2 className="mr-1 size-4" />
+            {confirmDelete ? 'Точно видалити? Натисни ще раз' : 'Видалити гру'}
+          </Button>
         )}
       </aside>
 

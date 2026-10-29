@@ -8,6 +8,9 @@ import {
   startEvent,
   finishEvent,
   cancelEvent,
+  deleteEvent,
+  rebalanceEventTeams,
+  canAddTeam,
   DomainError,
   MIN_PLAYERS_PER_TEAM,
   MAX_PLAYERS_PER_TEAM,
@@ -15,9 +18,9 @@ import {
   starSummariesFor,
   mvpCountsFor,
 } from '@app/domain';
-import { ParticipantStatus, Position, type Prisma } from '@app/db';
+import { ParticipantStatus, Position, type Prisma, type PrismaClient } from '@app/db';
 import { router, publicProcedure, protectedProcedure, managerProcedure } from '../trpc.js';
-import { postToTelegram } from '../integrations/telegram.js';
+import { deleteTelegramMessage, postToTelegram } from '../integrations/telegram.js';
 import { eventAnnouncementText } from '../integrations/event-announcement.js';
 
 // Participants that count toward a filled slot.
@@ -49,7 +52,7 @@ export const eventsRouter = router({
         where: { id: input.fieldId },
         include: { venue: { include: { city: true } } },
       });
-      if (field) void postToTelegram(eventAnnouncementText(event, field));
+      if (field) void announce(ctx.prisma, event.id, eventAnnouncementText(event, field));
 
       return { id: event.id, invited };
     }),
@@ -100,6 +103,7 @@ export const eventsRouter = router({
           capacity,
           joinedCount: e._count.participants,
           availableSlots: Math.max(0, capacity - e._count.participants),
+          canAddTeam: canAddTeam(e, e._count.participants),
         };
       });
 
@@ -172,6 +176,7 @@ export const eventsRouter = router({
       capacity,
       joinedCount: event.participants.length,
       availableSlots: Math.max(0, capacity - event.participants.length),
+      canAddTeam: canAddTeam(event, event.participants.length),
     };
   }),
 
@@ -181,6 +186,8 @@ export const eventsRouter = router({
         eventId: z.string().min(1),
         position: z.nativeEnum(Position),
         teamId: z.string().min(1).nullable().optional(),
+        // All slots taken: open the next team and join it.
+        newTeam: z.boolean().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -189,6 +196,7 @@ export const eventsRouter = router({
         userId: ctx.user.id,
         position: input.position,
         teamId: input.teamId,
+        newTeam: input.newTeam,
       });
       return { participantId: p.id, status: p.status, position: p.preferredPosition };
     }),
@@ -221,4 +229,36 @@ export const eventsRouter = router({
       const e = await cancelEvent(ctx.prisma, { eventId: input.eventId, organizerId: ctx.user.id });
       return { id: e.id, status: e.status };
     }),
+
+  // Only while nobody has joined; also removes the channel post.
+  delete: protectedProcedure
+    .input(z.object({ eventId: z.string().min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      const { telegramMessageId } = await deleteEvent(ctx.prisma, {
+        eventId: input.eventId,
+        organizerId: ctx.user.id,
+      });
+      if (telegramMessageId !== null) void deleteTelegramMessage(telegramMessageId);
+      return { ok: true };
+    }),
+
+  // Reshuffle players into teams of equal strength by stars.
+  balanceTeams: protectedProcedure
+    .input(z.object({ eventId: z.string().min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      const moved = await rebalanceEventTeams(ctx.prisma, {
+        eventId: input.eventId,
+        organizerId: ctx.user.id,
+      });
+      return { moved };
+    }),
 });
+
+/** Posts the game to the channel and remembers the post so deleting the game can remove it. */
+async function announce(prisma: PrismaClient, eventId: string, text: string) {
+  const messageId = await postToTelegram(text);
+  if (messageId === null) return;
+  await prisma.event
+    .update({ where: { id: eventId }, data: { telegramMessageId: messageId } })
+    .catch((err: unknown) => console.error('Saving Telegram post id failed:', err));
+}
