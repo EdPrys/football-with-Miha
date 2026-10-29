@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState, type FormEvent } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useState, type FormEvent } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { trpc } from '@/lib/trpc';
 import { errorMessage } from '@/lib/errors';
@@ -12,20 +12,28 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 
+// useSearchParams needs a Suspense boundary for the static build.
 export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
+  );
+}
+
+function LoginForm() {
   const router = useRouter();
   const utils = trpc.useUtils();
-  const [mode, setMode] = useState<'login' | 'register'>('login');
+  // Landing/ad links open straight on signup via /login?mode=register.
+  const params = useSearchParams();
+  const [mode, setMode] = useState<'login' | 'register'>(
+    params.get('mode') === 'register' ? 'register' : 'login',
+  );
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const mismatch = mode === 'register' && confirm.length > 0 && confirm !== password;
-
-  // Landing/ad links open straight on signup via /login?mode=register.
-  useEffect(() => {
-    if (new URLSearchParams(window.location.search).get('mode') === 'register') setMode('register');
-  }, []);
 
   const done = async (token: string) => {
     setToken(token);
