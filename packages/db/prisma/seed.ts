@@ -8,7 +8,7 @@ async function main() {
     create: {
       id: 'seed-venue-hub',
       name: 'Football Hub',
-      city: 'Kyiv',
+      cityId: 'kyiv',
       fields: {
         create: [
           { id: 'seed-field-hub-1', name: 'Field #1', capacity: 10 },
@@ -25,7 +25,7 @@ async function main() {
     create: {
       id: 'seed-venue-arena',
       name: 'City Arena',
-      city: 'Kyiv',
+      cityId: 'kyiv',
       fields: {
         create: [{ id: 'seed-field-arena-1', name: 'Main Pitch', capacity: 22 }],
       },

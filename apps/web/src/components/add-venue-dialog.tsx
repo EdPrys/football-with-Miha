@@ -15,6 +15,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
+import { CitySelect } from '@/components/city-select';
 import {
   Select,
   SelectContent,
@@ -33,14 +34,14 @@ export function AddVenueDialog({
   venues,
   onCreated,
 }: {
-  venues: { id: string; name: string; city: string }[];
+  venues: { id: string; name: string; city: { name: string } }[];
   onCreated: (fieldId: string) => void;
 }) {
   const utils = trpc.useUtils();
   const [open, setOpen] = useState(false);
   const [venueId, setVenueId] = useState(NEW_VENUE);
   const [venueName, setVenueName] = useState('');
-  const [city, setCity] = useState('');
+  const [cityId, setCityId] = useState('kyiv');
   const [fieldName, setFieldName] = useState('');
   const [capacity, setCapacity] = useState('10');
 
@@ -51,7 +52,7 @@ export function AddVenueDialog({
   const reset = () => {
     setVenueId(NEW_VENUE);
     setVenueName('');
-    setCity('');
+    setCityId('kyiv');
     setFieldName('');
     setCapacity('10');
   };
@@ -61,7 +62,7 @@ export function AddVenueDialog({
     try {
       const targetVenueId =
         venueId === NEW_VENUE
-          ? (await createVenue.mutateAsync({ name: venueName.trim(), city: city.trim() })).id
+          ? (await createVenue.mutateAsync({ name: venueName.trim(), cityId })).id
           : venueId;
       const field = await addField.mutateAsync({
         venueId: targetVenueId,
@@ -107,7 +108,7 @@ export function AddVenueDialog({
                   <SelectItem value={NEW_VENUE}>+ Новий майданчик</SelectItem>
                   {venues.map((v) => (
                     <SelectItem key={v.id} value={v.id}>
-                      {v.name} · {v.city}
+                      {v.name} · {v.city.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -127,15 +128,8 @@ export function AddVenueDialog({
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="city">Місто</Label>
-                  <Input
-                    id="city"
-                    value={city}
-                    onChange={(e) => setCity(e.target.value)}
-                    placeholder="Київ"
-                    maxLength={120}
-                    required
-                  />
+                  <Label>Місто</Label>
+                  <CitySelect value={cityId} onChange={setCityId} className="w-full" />
                 </div>
               </div>
             )}

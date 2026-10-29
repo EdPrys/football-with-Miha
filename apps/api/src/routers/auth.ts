@@ -13,6 +13,7 @@ function publicUser(user: User) {
     email: user.email,
     role: user.role,
     avatarUrl: user.avatarUrl,
+    cityId: user.cityId,
     createdAt: user.createdAt,
   };
 }

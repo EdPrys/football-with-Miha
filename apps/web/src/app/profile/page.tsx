@@ -2,12 +2,15 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { LogOut } from 'lucide-react';
+import { LogOut, MapPin } from 'lucide-react';
+import { toast } from 'sonner';
 import { trpc } from '@/lib/trpc';
 import { clearToken } from '@/lib/auth';
 import { formatDate } from '@/lib/format';
 import { AvatarEditor } from '@/components/avatar-editor';
 import { BecomeOrganizer } from '@/components/become-organizer';
+import { CitySelect } from '@/components/city-select';
+import { errorMessage } from '@/lib/errors';
 import { SkillsEditor } from '@/components/skills-editor';
 import { StarRow } from '@/components/star-row';
 import { Card } from '@/components/ui/card';
@@ -86,6 +89,8 @@ export default function ProfilePage() {
         </Button>
       </div>
 
+      <CityCard cityId={me.data.user.cityId} />
+
       {me.data.user.role === 'PLAYER' && <BecomeOrganizer />}
 
       <div className="grid gap-5 lg:grid-cols-2 lg:items-start lg:gap-8">
@@ -126,6 +131,34 @@ export default function ProfilePage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// Where the player is based; organizers invite players from the game's city.
+function CityCard({ cityId }: { cityId: string }) {
+  const utils = trpc.useUtils();
+  const update = trpc.users.updateCity.useMutation({
+    onSuccess: () => {
+      toast.success('Місто змінено');
+      utils.auth.me.invalidate();
+      utils.players.profile.invalidate();
+    },
+    onError: (e) => toast.error(errorMessage(e)),
+  });
+
+  return (
+    <Card className="flex flex-row items-center justify-between gap-3 p-3">
+      <div className="flex items-center gap-2 text-sm">
+        <MapPin className="size-4 text-muted-foreground" />
+        <span>Моє місто</span>
+      </div>
+      <CitySelect
+        value={cityId}
+        onChange={(id) => id !== cityId && update.mutate({ cityId: id })}
+        disabled={update.isPending}
+        className="w-48"
+      />
+    </Card>
   );
 }
 

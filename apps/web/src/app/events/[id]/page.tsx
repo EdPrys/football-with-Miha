@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils';
 import { PitchLineup } from '@/components/pitch-lineup';
 import { MvpCard } from '@/components/mvp-card';
 import { PlayerAvatar } from '@/components/player-avatar';
+import { InviteDialog } from '@/components/invite-dialog';
 import { formatDate, formatRange, POSITION_LABEL, type PositionValue } from '@/lib/format';
 
 export default function EventPage() {
@@ -71,6 +72,8 @@ export default function EventPage() {
   const ratingOpen = !!e.ratingClosesAt && new Date() <= new Date(e.ratingClosesAt);
   const canRate = e.status === 'FINISHED' && mine?.status === 'ATTENDED' && ratingOpen;
   const canJoin = e.status === 'UPCOMING' && !mine && !full;
+  // Mirrors inviteToEvent: the organizer or anyone already in the game can invite.
+  const canInvite = e.status === 'UPCOMING' && (isOrganizer || !!mine);
 
   // Mobile: one column in the original order (aside is `display: contents`, so its
   // children flow into the outer flex and `order-*` interleaves them with the pitch).
@@ -92,7 +95,7 @@ export default function EventPage() {
               >
                 {e.field.venue.name}
               </Link>
-              , {e.field.venue.city} · {e.field.name}
+              , {e.field.venue.city.name} · {e.field.name}
             </span>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -130,6 +133,14 @@ export default function EventPage() {
                 ))}
             </div>
           </Card>
+        )}
+
+        {canInvite && (
+          <InviteDialog
+            eventId={e.id}
+            cityName={e.field.venue.city.name}
+            className="order-5 w-full"
+          />
         )}
 
         {mine && e.status === 'UPCOMING' && (

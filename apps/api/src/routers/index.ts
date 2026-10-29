@@ -8,6 +8,7 @@ import { usersRouter } from './users.js';
 import { invitationsRouter } from './invitations.js';
 import { notificationsRouter } from './notifications.js';
 import { mvpRouter } from './mvp.js';
+import { citiesRouter } from './cities.js';
 
 export const appRouter = router({
   auth: authRouter,
@@ -19,6 +20,7 @@ export const appRouter = router({
   invitations: invitationsRouter,
   notifications: notificationsRouter,
   mvp: mvpRouter,
+  cities: citiesRouter,
 });
 
 export type AppRouter = typeof appRouter;

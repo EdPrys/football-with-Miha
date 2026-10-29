@@ -11,6 +11,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 function AddFieldForm({ venueId, onDone }: { venueId: string; onDone: () => void }) {
   const [name, setName] = useState('');
@@ -67,14 +74,14 @@ function AddFieldForm({ venueId, onDone }: { venueId: string; onDone: () => void
 function VenuesPageContent() {
   const utils = trpc.useUtils();
   const venues = trpc.venues.list.useQuery();
+  const cities = trpc.cities.list.useQuery();
 
   const [name, setName] = useState('');
-  const [city, setCity] = useState('');
+  const [cityId, setCityId] = useState('kyiv');
   const createVenue = trpc.venues.create.useMutation({
     onSuccess: () => {
       toast.success('Майданчик створено');
       setName('');
-      setCity('');
       utils.venues.list.invalidate();
     },
     onError: (e) => toast.error(e.message),
@@ -82,8 +89,8 @@ function VenuesPageContent() {
 
   const submitVenue = (e: FormEvent) => {
     e.preventDefault();
-    if (!name || !city) return;
-    createVenue.mutate({ name, city });
+    if (!name) return;
+    createVenue.mutate({ name, cityId });
   };
 
   return (
@@ -111,16 +118,21 @@ function VenuesPageContent() {
             />
           </div>
           <div className="space-y-1">
-            <Label htmlFor="venue-city" className="text-xs">
-              Місто
-            </Label>
-            <Input
-              id="venue-city"
-              value={city}
-              onChange={(e) => setCity(e.target.value)}
-              placeholder="Kyiv"
-              className="w-40"
-            />
+            <Label className="text-xs">Місто</Label>
+            <Select value={cityId} onValueChange={(v) => v && setCityId(v)}>
+              <SelectTrigger className="w-48">
+                <SelectValue>
+                  {(id: string) => cities.data?.find((c) => c.id === id)?.name ?? null}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {(cities.data ?? []).map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <Button type="submit" disabled={createVenue.isPending}>
             <Plus className="mr-1 size-4" /> Створити
@@ -135,7 +147,7 @@ function VenuesPageContent() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-medium">{v.name}</p>
-                <p className="text-sm text-muted-foreground">{v.city}</p>
+                <p className="text-sm text-muted-foreground">{v.city.name}</p>
               </div>
               <Badge variant="secondary">{v.fields.length} полів</Badge>
             </div>

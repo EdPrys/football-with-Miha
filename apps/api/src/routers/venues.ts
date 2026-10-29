@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { eventCapacity, DomainError } from '@app/domain';
+import { eventCapacity, DomainError, assertCityExists } from '@app/domain';
 import { ParticipantStatus } from '@app/db';
 import { router, publicProcedure, managerProcedure } from '../trpc.js';
 
@@ -11,6 +11,7 @@ export const venuesRouter = router({
     return ctx.prisma.venue.findMany({
       orderBy: { name: 'asc' },
       include: {
+        city: true,
         fields: { where: { isActive: true }, orderBy: { name: 'asc' } },
       },
     });
@@ -20,7 +21,7 @@ export const venuesRouter = router({
   get: publicProcedure.input(z.object({ id: z.string().min(1) })).query(async ({ ctx, input }) => {
     const venue = await ctx.prisma.venue.findUnique({
       where: { id: input.id },
-      include: { fields: { orderBy: { name: 'asc' } } },
+      include: { city: true, fields: { orderBy: { name: 'asc' } } },
     });
     if (!venue) throw new DomainError('NOT_FOUND', 'Venue not found');
 
@@ -36,7 +37,7 @@ export const venuesRouter = router({
     return {
       id: venue.id,
       name: venue.name,
-      city: venue.city,
+      city: venue.city.name,
       fields: venue.fields,
       events: events.map((e) => {
         const capacity = eventCapacity(e);
@@ -55,8 +56,9 @@ export const venuesRouter = router({
   // Organizers (manager+) create places; players can't, so the catalogue
   // isn't spammed with empty venues.
   create: managerProcedure
-    .input(z.object({ name: z.string().min(1).max(120), city: z.string().min(1).max(120) }))
+    .input(z.object({ name: z.string().min(1).max(120), cityId: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
+      await assertCityExists(ctx.prisma, input.cityId);
       const venue = await ctx.prisma.venue.create({ data: input });
       return { id: venue.id };
     }),

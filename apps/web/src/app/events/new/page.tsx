@@ -8,6 +8,7 @@ import { trpc } from '@/lib/trpc';
 import { errorMessage } from '@/lib/errors';
 import { BecomeOrganizer } from '@/components/become-organizer';
 import { AddVenueDialog } from '@/components/add-venue-dialog';
+import { InvitePlayers } from '@/components/invite-players';
 import { Card } from '@/components/ui/card';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -36,19 +37,34 @@ export default function NewEventPage() {
   const [endTime, setEndTime] = useState('22:00');
   const [numberOfTeams, setNumberOfTeams] = useState('2');
   const [playersPerTeam, setPlayersPerTeam] = useState('5');
+  // Invitees belong to one city; picking a field in another city drops them.
+  const [invites, setInvites] = useState<{ cityId: string; ids: string[] }>({
+    cityId: '',
+    ids: [],
+  });
 
   const create = trpc.events.create.useMutation({
     onSuccess: (d) => {
-      toast.success('Гру створено!');
+      toast.success(d.invited ? `Гру створено! Запрошено гравців: ${d.invited}` : 'Гру створено!');
       router.push(`/events/${d.id}`);
     },
     onError: (e) => toast.error(errorMessage(e)),
   });
 
   const fields = useMemo(
-    () => (venues.data ?? []).flatMap((v) => v.fields.map((f) => ({ ...f, venue: v.name }))),
+    () =>
+      (venues.data ?? []).flatMap((v) =>
+        v.fields.map((f) => ({ ...f, venue: v.name, cityId: v.cityId, city: v.city.name })),
+      ),
     [venues.data],
   );
+
+  const field = fields.find((f) => f.id === fieldId);
+  const cityPlayers = trpc.players.inCity.useQuery(
+    { cityId: field?.cityId ?? '' },
+    { enabled: !!field && me.data?.user.role !== 'PLAYER' },
+  );
+  const invitedIds = field && invites.cityId === field.cityId ? invites.ids : [];
 
   if (me.isLoading) return <Skeleton className="h-40 w-full rounded-xl" />;
   if (!me.data)
@@ -73,6 +89,7 @@ export default function NewEventPage() {
       endAt,
       numberOfTeams: Number(numberOfTeams),
       playersPerTeam: Number(playersPerTeam),
+      invitedUserIds: invitedIds,
     });
   };
 
@@ -159,8 +176,24 @@ export default function NewEventPage() {
               </Select>
             </div>
           </div>
+          {field && (
+            <div className="space-y-1.5">
+              <Label>Запросити гравців</Label>
+              <InvitePlayers
+                players={cityPlayers.data}
+                loading={cityPlayers.isLoading}
+                cityName={field.city}
+                selected={invitedIds}
+                onChange={(ids) => setInvites({ cityId: field.cityId, ids })}
+              />
+            </div>
+          )}
           <Button type="submit" className="w-full" disabled={create.isPending}>
-            {create.isPending ? '...' : 'Створити'}
+            {create.isPending
+              ? '...'
+              : invitedIds.length
+                ? `Створити і запросити (${invitedIds.length})`
+                : 'Створити'}
           </Button>
         </form>
       </Card>

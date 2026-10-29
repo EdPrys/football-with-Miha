@@ -9,7 +9,7 @@ import {
   starSummariesFor,
   mvpCountsFor,
 } from '@app/domain';
-import { router, publicProcedure, protectedProcedure } from '../trpc.js';
+import { router, publicProcedure, protectedProcedure, managerProcedure } from '../trpc.js';
 
 const skillValue = z.number().int().min(MIN_SKILL).max(MAX_SKILL);
 const skillValues = z.object(
@@ -32,6 +32,7 @@ export const playersRouter = router({
           avatarUrl: true,
           role: true,
           createdAt: true,
+          city: { select: { id: true, name: true } },
           profile: {
             select: {
               bio: true,
@@ -57,6 +58,7 @@ export const playersRouter = router({
         name: user.name,
         avatarUrl: user.avatarUrl,
         role: user.role,
+        city: user.city,
         bio: user.profile?.bio ?? null,
         skills: user.profile?.skills ?? [],
         stars: stars.get(input.userId)!,
@@ -64,6 +66,23 @@ export const playersRouter = router({
         matchesPlayed: attended,
         attendance: attendancePercent({ attended, noShow }),
       };
+    }),
+
+  // Players based in a city, for an organizer to invite to a game there.
+  inCity: managerProcedure
+    .input(z.object({ cityId: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      const users = await ctx.prisma.user.findMany({
+        where: { cityId: input.cityId, id: { not: ctx.user.id } },
+        orderBy: { name: 'asc' },
+        select: { id: true, name: true, avatarUrl: true },
+        take: 500,
+      });
+      const stars = await starSummariesFor(
+        ctx.prisma,
+        users.map((u) => u.id),
+      );
+      return users.map((u) => ({ ...u, stars: stars.get(u.id)! }));
     }),
 
   // The current player sets their own skills (1–100 each).

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { Role } from '@app/db';
-import { requestOrganizerRole } from '@app/domain';
+import { requestOrganizerRole, setUserCity } from '@app/domain';
 import { router, protectedProcedure, adminProcedure } from '../trpc.js';
 
 // An avatar is either a link or a small inline image. Uploads are resized
@@ -24,6 +24,14 @@ export const usersRouter = router({
         where: { id: ctx.user.id },
         data: { avatarUrl: input.avatarUrl },
       });
+      return { ok: true };
+    }),
+
+  // Change the city you are based in (organizers invite players by city).
+  updateCity: protectedProcedure
+    .input(z.object({ cityId: z.string().min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      await setUserCity(ctx.prisma, ctx.user.id, input.cityId);
       return { ok: true };
     }),
 

@@ -2,6 +2,7 @@ import { z } from 'zod';
 import {
   createEvent,
   eventCapacity,
+  invitePlayers,
   joinEvent,
   leaveEvent,
   startEvent,
@@ -31,18 +32,26 @@ export const eventsRouter = router({
         endAt: z.date(),
         numberOfTeams: z.number().int().min(2),
         playersPerTeam: z.number().int().min(MIN_PLAYERS_PER_TEAM).max(MAX_PLAYERS_PER_TEAM),
+        // Players to invite right away (picked from the game's city).
+        invitedUserIds: z.array(z.string().min(1)).max(200).default([]),
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const event = await createEvent(ctx.prisma, { organizerId: ctx.user.id, ...input });
+      const { invitedUserIds, ...data } = input;
+      const event = await createEvent(ctx.prisma, { organizerId: ctx.user.id, ...data });
+      const invited = await invitePlayers(ctx.prisma, {
+        eventId: event.id,
+        inviterId: ctx.user.id,
+        invitedUserIds,
+      });
 
       const field = await ctx.prisma.field.findUnique({
         where: { id: input.fieldId },
-        include: { venue: true },
+        include: { venue: { include: { city: true } } },
       });
       if (field) void postToTelegram(eventAnnouncementText(event, field));
 
-      return { id: event.id };
+      return { id: event.id, invited };
     }),
 
   // Discovery feed: upcoming events with free-slot info and simple filters.
@@ -71,7 +80,7 @@ export const eventsRouter = router({
         where,
         orderBy: { startAt: 'asc' },
         include: {
-          field: { include: { venue: true } },
+          field: { include: { venue: { include: { city: true } } } },
           _count: { select: { participants: { where: { status: { in: ACTIVE_STATUSES } } } } },
         },
       });
@@ -86,7 +95,7 @@ export const eventsRouter = router({
           playersPerTeam: e.playersPerTeam,
           venueId: e.field.venue.id,
           venue: e.field.venue.name,
-          city: e.field.venue.city,
+          city: e.field.venue.city.name,
           field: e.field.name,
           capacity,
           joinedCount: e._count.participants,
@@ -135,7 +144,7 @@ export const eventsRouter = router({
     const event = await ctx.prisma.event.findUnique({
       where: { id: input.id },
       include: {
-        field: { include: { venue: true } },
+        field: { include: { venue: { include: { city: true } } } },
         organizer: { select: { id: true, name: true, avatarUrl: true } },
         teams: { orderBy: { name: 'asc' } },
         participants: {

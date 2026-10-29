@@ -77,6 +77,9 @@ model User {
   passwordHash String
   role         Role     @default(PLAYER)
   avatarUrl    String?
+  // Home city ("базування"); organizers invite players from the game's city.
+  cityId       String   @default("kyiv")
+  city         City     @relation(fields: [cityId], references: [id])
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -92,6 +95,8 @@ model User {
   mvpVotesGiven    MvpVote[]         @relation("MvpVoter")
   mvpVotesReceived MvpVote[]         @relation("MvpNominee")
   mvpAwards        EventMvp[]
+
+  @@index([cityId])
 }
 
 // The "football profile". Aggregated skills are stored in PlayerSkill rows,
@@ -120,14 +125,30 @@ model PlayerSkill {
   @@unique([profileId, skill])
 }
 
+// ---------- Cities ----------
+// Ukrainian cities players and venues are based in: oblast centres outside the
+// occupied territories plus the largest cities of each oblast. Rows are added
+// by migrations; id is a readable slug ("kyiv", "kryvyi-rih").
+model City {
+  id     String @id
+  name   String @unique
+  region String
+
+  users  User[]
+  venues Venue[]
+}
+
 // ---------- Venues & fields ----------
 model Venue {
   id        String   @id @default(cuid())
   name      String
-  city      String
+  cityId    String
+  city      City     @relation(fields: [cityId], references: [id])
   createdAt DateTime @default(now())
 
   fields Field[]
+
+  @@index([cityId])
 }
 
 model Field {

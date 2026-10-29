@@ -91,3 +91,29 @@ export async function inviteToEvent(prisma: PrismaClient, input: InviteInput): P
 
   return invitation;
 }
+
+export interface InvitePlayersInput {
+  eventId: string;
+  inviterId: string;
+  invitedUserIds: string[];
+}
+
+/**
+ * Invite several players at once (e.g. right after creating a game). Applies
+ * the same rules as a single invite; duplicates in the list are ignored.
+ * Returns how many invitations were sent.
+ */
+export async function invitePlayers(
+  prisma: PrismaClient,
+  input: InvitePlayersInput,
+): Promise<number> {
+  const ids = [...new Set(input.invitedUserIds)];
+  for (const invitedUserId of ids) {
+    await inviteToEvent(prisma, {
+      eventId: input.eventId,
+      inviterId: input.inviterId,
+      invitedUserId,
+    });
+  }
+  return ids.length;
+}

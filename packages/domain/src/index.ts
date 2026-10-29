@@ -20,3 +20,4 @@ export * from './players/attendance.js';
 export * from './notifications/create.js';
 export * from './invitations/invite.js';
 export * from './invitations/respond.js';
+export * from './cities/cities.js';
