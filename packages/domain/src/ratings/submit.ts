@@ -1,4 +1,4 @@
-import type { EventStatus, PrismaClient, Rating } from '@app/db';
+import type { EventStatus, PrismaClient } from '@app/db';
 import { DomainError } from '../errors.js';
 
 export const MIN_STARS = 1;
@@ -39,24 +39,46 @@ export function assertRatable(ctx: RatableContext): void {
   }
 }
 
-export interface SubmitRatingInput {
-  eventId: string;
-  raterId: string;
+export interface RatingEntry {
   rateeId: string;
   stars: number;
 }
 
+export interface SubmitRatingsInput {
+  eventId: string;
+  raterId: string;
+  ratings: RatingEntry[];
+}
+
 /**
- * Submit a star rating (immutable, optional for players). The DB unique key on
- * (event, rater, ratee) backs up the "only once" rule against races.
+ * Keeps only real ratings: 0 stars means "not rated" and is dropped, anything
+ * else must be 1–5. Rating the same player twice in one batch is rejected.
  */
-export async function submitRating(
-  prisma: PrismaClient,
-  input: SubmitRatingInput,
-): Promise<Rating> {
-  if (!Number.isInteger(input.stars) || input.stars < MIN_STARS || input.stars > MAX_STARS) {
-    throw new DomainError('VALIDATION', 'Stars must be from 1 to 5');
+export function ratingsToSave(ratings: RatingEntry[]): RatingEntry[] {
+  const kept = ratings.filter((r) => r.stars !== 0);
+  for (const r of kept) {
+    if (!Number.isInteger(r.stars) || r.stars < MIN_STARS || r.stars > MAX_STARS) {
+      throw new DomainError('VALIDATION', 'Stars must be from 1 to 5');
+    }
   }
+  if (new Set(kept.map((r) => r.rateeId)).size !== kept.length) {
+    throw new DomainError('VALIDATION', 'Each player can be rated only once');
+  }
+  return kept;
+}
+
+/**
+ * Submit star ratings for several co-players at once (immutable, optional).
+ * All-or-nothing: if any rating breaks a rule, none are saved. The DB unique
+ * key on (event, rater, ratee) backs up the "only once" rule against races.
+ * Returns how many ratings were saved.
+ */
+export async function submitRatings(
+  prisma: PrismaClient,
+  input: SubmitRatingsInput,
+): Promise<number> {
+  const ratings = ratingsToSave(input.ratings);
+  if (ratings.length === 0) return 0;
 
   const event = await prisma.event.findUnique({
     where: { id: input.eventId },
@@ -64,43 +86,46 @@ export async function submitRating(
   });
   if (!event) throw new DomainError('NOT_FOUND', 'Event not found');
 
-  const [rater, ratee, already] = await Promise.all([
-    prisma.eventParticipant.findUnique({
-      where: { eventId_userId: { eventId: input.eventId, userId: input.raterId } },
-      select: { status: true },
+  const userIds = [input.raterId, ...ratings.map((r) => r.rateeId)];
+  const [participants, already] = await Promise.all([
+    prisma.eventParticipant.findMany({
+      where: { eventId: input.eventId, userId: { in: userIds } },
+      select: { userId: true, status: true },
     }),
-    prisma.eventParticipant.findUnique({
-      where: { eventId_userId: { eventId: input.eventId, userId: input.rateeId } },
-      select: { status: true },
-    }),
-    prisma.rating.findUnique({
+    prisma.rating.findMany({
       where: {
-        eventId_raterId_rateeId: {
-          eventId: input.eventId,
-          raterId: input.raterId,
-          rateeId: input.rateeId,
-        },
+        eventId: input.eventId,
+        raterId: input.raterId,
+        rateeId: { in: ratings.map((r) => r.rateeId) },
       },
-      select: { id: true },
+      select: { rateeId: true },
     }),
   ]);
+  const attended = new Set(
+    participants.filter((p) => p.status === 'ATTENDED').map((p) => p.userId),
+  );
+  const alreadyRated = new Set(already.map((r) => r.rateeId));
+  const now = new Date();
 
-  assertRatable({
-    eventStatus: event.status,
-    finishedAt: event.finishedAt,
-    now: new Date(),
-    isSelf: input.raterId === input.rateeId,
-    raterAttended: rater?.status === 'ATTENDED',
-    rateeAttended: ratee?.status === 'ATTENDED',
-    alreadyRated: !!already,
-  });
+  for (const r of ratings) {
+    assertRatable({
+      eventStatus: event.status,
+      finishedAt: event.finishedAt,
+      now,
+      isSelf: input.raterId === r.rateeId,
+      raterAttended: attended.has(input.raterId),
+      rateeAttended: attended.has(r.rateeId),
+      alreadyRated: alreadyRated.has(r.rateeId),
+    });
+  }
 
-  return prisma.rating.create({
-    data: {
+  const { count } = await prisma.rating.createMany({
+    data: ratings.map((r) => ({
       eventId: input.eventId,
       raterId: input.raterId,
-      rateeId: input.rateeId,
-      stars: input.stars,
-    },
+      rateeId: r.rateeId,
+      stars: r.stars,
+    })),
   });
+  return count;
 }

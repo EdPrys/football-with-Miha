@@ -16,7 +16,9 @@ scaled earlier 1–5 values ×20) (`players.updateMySkills` → `setOwnSkills` i
 ## Star ratings — from co-players
 
 One `Rating` row per `(eventId, raterId, rateeId)` with `stars` 1–5. Optional
-for players (they can skip anyone). Immutable.
+for players (they can skip anyone). Immutable. After the game the rater sees
+every co-player in one list and submits them together (`submitRatings`); a
+player left at 0 stars is not rated at all — 0 never counts toward the average.
 
 Rules (enforced in `packages/domain/src/ratings/submit.ts`):
 
@@ -24,6 +26,7 @@ Rules (enforced in `packages/domain/src/ratings/submit.ts`):
 - Only within `RATING_WINDOW_HOURS` (24) after `Event.finishedAt`.
 - Rater ≠ ratee; both ATTENDED the same event.
 - One rating per rater→ratee per event (domain check + DB unique key).
+- A batch is all-or-nothing: one invalid rating rejects the whole list.
 
 The legacy per-skill columns on `Rating` (`pace`…`physical`) are nullable and
 kept only for history; the 2026-10-23 migration backfilled `stars` with their

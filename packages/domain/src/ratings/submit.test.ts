@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { assertRatable, ratingClosesAt } from './submit.js';
+import { assertRatable, ratingClosesAt, ratingsToSave } from './submit.js';
 import { DomainError } from '../errors.js';
 
 const finishedAt = new Date('2026-10-23T20:00:00.000Z');
@@ -48,5 +48,35 @@ describe('ratingClosesAt', () => {
   it('is 24h after the finish, or null while not finished', () => {
     expect(ratingClosesAt(finishedAt)?.toISOString()).toBe('2026-10-24T20:00:00.000Z');
     expect(ratingClosesAt(null)).toBeNull();
+  });
+});
+
+describe('ratingsToSave', () => {
+  it('drops players left at 0 stars', () => {
+    expect(
+      ratingsToSave([
+        { rateeId: 'a', stars: 4 },
+        { rateeId: 'b', stars: 0 },
+        { rateeId: 'c', stars: 1 },
+      ]),
+    ).toEqual([
+      { rateeId: 'a', stars: 4 },
+      { rateeId: 'c', stars: 1 },
+    ]);
+  });
+  it('returns nothing when nobody got stars', () => {
+    expect(ratingsToSave([{ rateeId: 'a', stars: 0 }])).toEqual([]);
+  });
+  it('rejects stars outside 1–5', () => {
+    expect(() => ratingsToSave([{ rateeId: 'a', stars: 6 }])).toThrow(DomainError);
+    expect(() => ratingsToSave([{ rateeId: 'a', stars: 2.5 }])).toThrow(DomainError);
+  });
+  it('rejects rating the same player twice in one batch', () => {
+    expect(() =>
+      ratingsToSave([
+        { rateeId: 'a', stars: 3 },
+        { rateeId: 'a', stars: 5 },
+      ]),
+    ).toThrow(/only once/);
   });
 });

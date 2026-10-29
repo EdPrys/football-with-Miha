@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { submitRating, ratingClosesAt, DomainError, MIN_STARS, MAX_STARS } from '@app/domain';
+import { submitRatings, ratingClosesAt, DomainError, MAX_STARS } from '@app/domain';
 import { router, protectedProcedure } from '../trpc.js';
 
 export const ratingsRouter = router({
@@ -43,21 +43,27 @@ export const ratingsRouter = router({
       return { closesAt, targets };
     }),
 
+  // Stars for the whole list at once; players left at 0 stars aren't rated.
   submit: protectedProcedure
     .input(
       z.object({
         eventId: z.string().min(1),
-        rateeId: z.string().min(1),
-        stars: z.number().int().min(MIN_STARS).max(MAX_STARS),
+        ratings: z
+          .array(
+            z.object({
+              rateeId: z.string().min(1),
+              stars: z.number().int().min(0).max(MAX_STARS),
+            }),
+          )
+          .max(100),
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const rating = await submitRating(ctx.prisma, {
+      const saved = await submitRatings(ctx.prisma, {
         eventId: input.eventId,
         raterId: ctx.user.id,
-        rateeId: input.rateeId,
-        stars: input.stars,
+        ratings: input.ratings,
       });
-      return { id: rating.id };
+      return { saved };
     }),
 });

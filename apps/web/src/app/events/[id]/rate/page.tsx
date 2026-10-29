@@ -33,11 +33,9 @@ export default function RatePage() {
     );
 
   const closesAt = targets.data?.closesAt ? new Date(targets.data.closesAt) : null;
-  // Rating is optional: skipped players simply drop out of this session's queue.
-  const list = (targets.data?.targets ?? []).filter((t) => !skipped.includes(t.userId));
-  const current = list[0];
+  const list = targets.data?.targets ?? [];
 
-  if (!current)
+  if (list.length === 0)
     return (
       <Card className="mx-auto max-w-md space-y-4 p-8 text-center">
         <p className="text-sm">
@@ -59,65 +57,67 @@ export default function RatePage() {
       <div>
         <h1 className="text-2xl font-bold">Оцінити гравців</h1>
         <p className="text-sm text-muted-foreground">
-          Залишилось: {list.length}
-          {closesAt && ` · можна до ${formatDate(closesAt)}, ${formatTime(closesAt)}`}
+          Постав зірки тим, кого хочеш оцінити. Без зірок — без оцінки.
+          {closesAt && ` Можна до ${formatDate(closesAt)}, ${formatTime(closesAt)}.`}
         </p>
       </div>
-      <RatingForm
-        key={current.userId}
-        eventId={id}
-        userId={current.userId}
-        name={current.name}
-        avatarUrl={current.avatarUrl}
-        onSkip={() => setSkipped((s) => [...s, current.userId])}
-      />
+      <RatingList eventId={id} players={list} />
     </div>
   );
 }
 
-function RatingForm({
+function RatingList({
   eventId,
-  userId,
-  name,
-  avatarUrl,
-  onSkip,
+  players,
 }: {
   eventId: string;
-  userId: string;
-  name: string;
-  avatarUrl: string | null;
-  onSkip: () => void;
+  players: { userId: string; name: string; avatarUrl: string | null }[];
 }) {
   const utils = trpc.useUtils();
-  const [stars, setStars] = useState(0);
+  // 0 stars = not rated; tapping the current star again clears it back to 0.
+  const [stars, setStars] = useState<Record<string, number>>({});
+  const rated = players.filter((p) => (stars[p.userId] ?? 0) > 0).length;
   const submit = trpc.ratings.submit.useMutation({
-    onSuccess: () => {
-      toast.success(`Оцінку для ${name} збережено`);
+    onSuccess: ({ saved }) => {
+      toast.success(`Збережено оцінок: ${saved}`);
       utils.ratings.rateableTargets.invalidate({ eventId });
     },
     onError: (e) => toast.error(errorMessage(e)),
   });
 
   return (
-    <Card className="space-y-5 p-5">
-      <div className="flex flex-col items-center gap-2 text-center">
-        <PlayerAvatar name={name} url={avatarUrl} className="size-16" />
-        <p className="text-lg font-semibold">{name}</p>
-        <p className="text-sm text-muted-foreground">Як зіграв цей гравець?</p>
-      </div>
-      <div className="flex justify-center">
-        <StarRating value={stars} onChange={setStars} />
-      </div>
-      <div className="flex gap-2">
-        <Button variant="outline" className="flex-1" disabled={submit.isPending} onClick={onSkip}>
-          Пропустити
-        </Button>
+    <Card className="space-y-1 p-2">
+      {players.map((p) => {
+        const value = stars[p.userId] ?? 0;
+        return (
+          <div key={p.userId} className="flex items-center gap-3 rounded-lg p-2">
+            <PlayerAvatar name={p.name} url={p.avatarUrl} className="size-10 shrink-0" />
+            <p className="min-w-0 flex-1 truncate font-medium">{p.name}</p>
+            <StarRating
+              value={value}
+              onChange={(v) => setStars((s) => ({ ...s, [p.userId]: v === value ? 0 : v }))}
+              className="gap-0.5"
+              starClassName="size-6"
+            />
+          </div>
+        );
+      })}
+      <div className="p-2 pt-3">
         <Button
-          className="flex-1"
-          disabled={submit.isPending || stars === 0}
-          onClick={() => submit.mutate({ eventId, rateeId: userId, stars })}
+          className="w-full"
+          disabled={submit.isPending || rated === 0}
+          onClick={() =>
+            submit.mutate({
+              eventId,
+              ratings: players.map((p) => ({ rateeId: p.userId, stars: stars[p.userId] ?? 0 })),
+            })
+          }
         >
-          {submit.isPending ? '...' : 'Оцінити'}
+          {submit.isPending
+            ? '...'
+            : rated === 0
+              ? 'Постав комусь зірки'
+              : `Зберегти оцінки (${rated})`}
         </Button>
       </div>
     </Card>
