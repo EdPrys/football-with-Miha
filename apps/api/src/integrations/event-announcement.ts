@@ -4,10 +4,15 @@ const dateFmt = new Intl.DateTimeFormat('uk-UA', {
   weekday: 'long',
   day: 'numeric',
   month: 'long',
+  timeZone: 'Europe/Kyiv',
 });
-const timeFmt = new Intl.DateTimeFormat('uk-UA', { hour: '2-digit', minute: '2-digit' });
+const timeFmt = new Intl.DateTimeFormat('uk-UA', {
+  hour: '2-digit',
+  minute: '2-digit',
+  timeZone: 'Europe/Kyiv',
+});
 
-/** Base URL of the web app, for linking back to the event. Not deployed yet, so defaults to localhost. */
+/** Base URL of the web app, for linking back to the event (prod: https://kopanka.pro). */
 const APP_URL = process.env.APP_URL ?? 'http://localhost:3000';
 
 export function eventAnnouncementText(
