@@ -11,3 +11,6 @@ coverage/
 .turbo/
 *.tsbuildinfo
 prisma/*.db
+# Personal Codex permissions stay on this machine.
+/.codex/config.toml
+/config/codex-project.toml

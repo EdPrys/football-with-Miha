@@ -1,44 +1,25 @@
 import { prisma } from '../src/index.js';
+import { buildCatalogPlan, importCatalog } from './seed-catalog.mjs';
 
 async function main() {
-  // Venues with fields (MVP assumes fields already exist in the system).
-  const hub = await prisma.venue.upsert({
-    where: { id: 'seed-venue-hub' },
-    update: {},
-    create: {
-      id: 'seed-venue-hub',
-      name: 'Football Hub',
-      cityId: 'kyiv',
-      fields: {
-        create: [
-          { id: 'seed-field-hub-1', name: 'Field #1', capacity: 10 },
-          { id: 'seed-field-hub-2', name: 'Field #2', capacity: 12 },
-          { id: 'seed-field-hub-3', name: 'Field #3', capacity: 14 },
-        ],
-      },
-    },
+  // Use the same verified research, deterministic IDs and null-only enrichment
+  // as the Railway utility. Seed never recreates fictional demonstration venues.
+  const plan = buildCatalogPlan();
+  const result = await importCatalog(prisma, plan);
+  console.log('Verified catalogue seeded:', {
+    createdVenues: result.createdVenues.length,
+    createdFields: result.createdFields.length,
+    updatedVenues: result.updatedVenues.length,
+    updatedFields: result.updatedFields.length,
+    deferred: plan.deferred.length,
   });
-
-  const arena = await prisma.venue.upsert({
-    where: { id: 'seed-venue-arena' },
-    update: {},
-    create: {
-      id: 'seed-venue-arena',
-      name: 'City Arena',
-      cityId: 'kyiv',
-      fields: {
-        create: [{ id: 'seed-field-arena-1', name: 'Main Pitch', capacity: 22 }],
-      },
-    },
-  });
-
-  console.log('Seeded venues:', hub.name, '/', arena.name);
 }
 
 main()
-  .then(() => prisma.$disconnect())
-  .catch(async (e) => {
-    console.error(e);
-    await prisma.$disconnect();
-    process.exit(1);
-  });
+  .catch(() => {
+    console.error(
+      'Verified catalogue seed failed. Apply migrations and check catalogue source data.',
+    );
+    process.exitCode = 1;
+  })
+  .finally(() => prisma.$disconnect());

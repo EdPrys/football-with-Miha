@@ -1,6 +1,8 @@
 'use client';
 
-import { useMemo, useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
+import { MapPin, CalendarDays, Users, ArrowRight } from 'lucide-react';
+import { CitySelect } from '@/components/city-select';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
@@ -32,6 +34,8 @@ export default function NewEventPage() {
   const me = trpc.auth.me.useQuery(undefined, { retry: false });
   const venues = trpc.venues.list.useQuery();
 
+  const [cityId, setCityId] = useState('kyiv');
+  const [venueId, setVenueId] = useState('');
   const [fieldId, setFieldId] = useState('');
   // iOS shows an empty date input as a blank box, so start from today.
   const today = new Date().toLocaleDateString('sv-SE'); // YYYY-MM-DD, local time
@@ -55,20 +59,27 @@ export default function NewEventPage() {
     onError: (e) => toast.error(errorMessage(e)),
   });
 
-  const fields = useMemo(
-    () =>
-      (venues.data ?? []).flatMap((v) =>
-        v.fields.map((f) => ({ ...f, venue: v.name, cityId: v.cityId, city: v.city.name })),
-      ),
-    [venues.data],
-  );
-
+  const cityVenues = (venues.data ?? []).filter((v) => v.cityId === cityId);
+  const venue = cityVenues.find((v) => v.id === venueId);
+  const fields = venue?.fields ?? [];
   const field = fields.find((f) => f.id === fieldId);
   const cityPlayers = trpc.players.inCity.useQuery(
-    { cityId: field?.cityId ?? '' },
-    { enabled: !!field && me.data?.user.role !== 'PLAYER' },
+    { cityId },
+    { enabled: !!field && !!me.data && me.data.user.role !== 'PLAYER' },
   );
-  const invitedIds = field && invites.cityId === field.cityId ? invites.ids : [];
+  const invitedIds = field && invites.cityId === cityId ? invites.ids : [];
+
+  const changeCity = (next: string) => {
+    if (next === cityId) return;
+    setCityId(next);
+    setVenueId('');
+    setFieldId('');
+    setInvites({ cityId: next, ids: [] });
+  };
+  const changeVenue = (next: string) => {
+    setVenueId(next);
+    setFieldId('');
+  };
 
   if (me.isLoading) return <Skeleton className="h-40 w-full rounded-xl" />;
   if (!me.data)
@@ -83,10 +94,15 @@ export default function NewEventPage() {
   if (me.data.user.role === 'PLAYER') return <BecomeOrganizer className="mx-auto max-w-md" />;
 
   const submit = (e: FormEvent) => {
+    if (e.target !== e.currentTarget) return;
     e.preventDefault();
-    if (!fieldId || !date) return toast.error('Оберіть поле і дату');
+    if (!field || !venue || !date) return toast.error('Обери місто, стадіон, поле і дату');
     const startAt = new Date(`${date}T${startTime}`);
     const endAt = new Date(`${date}T${endTime}`);
+    if (!Number.isFinite(startAt.getTime()) || !Number.isFinite(endAt.getTime()))
+      return toast.error('Перевір дату та час');
+    if (startAt <= new Date()) return toast.error('Початок гри має бути в майбутньому');
+    if (endAt <= startAt) return toast.error('Кінець гри має бути пізніше початку');
     create.mutate({
       fieldId,
       startAt,
@@ -98,35 +114,117 @@ export default function NewEventPage() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-xl space-y-4">
-      <h1 className="text-2xl font-bold">Створити гру</h1>
-      <Card className="p-5">
-        <form onSubmit={submit} className="space-y-4">
-          <div className="space-y-1.5">
-            <Label>Де граємо</Label>
-            <Select value={fieldId} onValueChange={(v) => setFieldId(v ?? '')}>
-              <SelectTrigger className={cn(!fieldId && 'border-primary/60')}>
-                <SelectValue placeholder="Оберіть стадіон і поле">
-                  {(id: string) => {
-                    const f = fields.find((x) => x.id === id);
-                    // Base UI calls this even with no value, hiding the placeholder.
-                    return f ? `${f.venue} · ${f.name}` : 'Оберіть стадіон і поле';
-                  }}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {fields.map((f) => (
-                  <SelectItem key={f.id} value={f.id}>
-                    {f.venue} · {f.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <AddVenueDialog venues={venues.data ?? []} onCreated={setFieldId} />
+    <div className="mx-auto w-full max-w-2xl space-y-6">
+      <div>
+        <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+          Збери свою команду
+        </p>
+        <h1 className="text-[2rem] font-semibold tracking-tight md:text-4xl">Створити гру</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Обери майданчик, час і формат. Гравців можна запросити одразу.
+        </p>
+      </div>
+      <Card className="rounded-2xl p-5 md:p-7">
+        <form onSubmit={submit} className="space-y-7">
+          <div className="flex items-center gap-2 border-b border-border pb-3 text-sm font-semibold">
+            <MapPin className="size-4 text-primary" />
+            Місце гри
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="game-city">Місто</Label>
+            <CitySelect id="game-city" value={cityId} onChange={changeCity} className="w-full" />
+          </div>
+          {venues.isError ? (
+            <div className="rounded-xl border border-border p-4 text-sm">
+              <p>Не вдалося завантажити стадіони.</p>
+              <Button
+                type="button"
+                variant="outline"
+                className="mt-3 h-11 px-4"
+                onClick={() => venues.refetch()}
+              >
+                Спробувати ще
+              </Button>
+            </div>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="game-venue">Стадіон / майданчик</Label>
+                <Select
+                  value={venueId}
+                  onValueChange={(v) => changeVenue(v ?? '')}
+                  disabled={venues.isLoading || !cityVenues.length}
+                >
+                  <SelectTrigger id="game-venue" className="h-11 min-h-11 md:h-11">
+                    <SelectValue>
+                      {(id: string) =>
+                        cityVenues.find((v) => v.id === id)?.name ??
+                        (venues.isLoading ? 'Завантажуємо…' : 'Обери стадіон')
+                      }
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {cityVenues.map((v) => (
+                      <SelectItem key={v.id} value={v.id}>
+                        {v.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="game-field">Поле / зал</Label>
+                <Select
+                  value={fieldId}
+                  onValueChange={(v) => setFieldId(v ?? '')}
+                  disabled={!venue || !fields.length}
+                >
+                  <SelectTrigger id="game-field" className="h-11 min-h-11 md:h-11">
+                    <SelectValue>
+                      {(id: string) => fields.find((f) => f.id === id)?.name ?? 'Обери поле'}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {fields.map((f) => (
+                      <SelectItem key={f.id} value={f.id}>
+                        {f.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+          {!venues.isLoading && !venues.isError && !cityVenues.length && (
+            <p className="text-sm text-muted-foreground">
+              У цьому місті ще немає стадіонів. Додай перший або обери інше місто.
+            </p>
+          )}
+          {venue && !fields.length && (
+            <p className="text-sm text-muted-foreground">
+              На цьому майданчику поки немає активних полів. Додай поле, щоб створити гру.
+            </p>
+          )}
+          {!venues.isError && (
+            <AddVenueDialog
+              selectedCityId={cityId}
+              venues={cityVenues}
+              onCreated={(nextFieldId, nextVenueId, nextCityId) => {
+                if (nextCityId !== cityId) setInvites({ cityId: nextCityId, ids: [] });
+                setCityId(nextCityId);
+                setVenueId(nextVenueId);
+                setFieldId(nextFieldId);
+              }}
+            />
+          )}
+          <div className="flex items-center gap-2 border-b border-border pb-3 text-sm font-semibold">
+            <CalendarDays className="size-4 text-primary" />
+            Коли граємо
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="date">Дата</Label>
             <Input
+              className="h-11 min-h-11 md:h-11"
               id="date"
               type="date"
               min={today}
@@ -139,6 +237,8 @@ export default function NewEventPage() {
             <div className="space-y-1.5">
               <Label htmlFor="start">Початок</Label>
               <Input
+                className="h-11 min-h-11 md:h-11"
+                required
                 id="start"
                 type="time"
                 value={startTime}
@@ -148,6 +248,8 @@ export default function NewEventPage() {
             <div className="space-y-1.5">
               <Label htmlFor="end">Кінець</Label>
               <Input
+                className="h-11 min-h-11 md:h-11"
+                required
                 id="end"
                 type="time"
                 value={endTime}
@@ -155,10 +257,16 @@ export default function NewEventPage() {
               />
             </div>
           </div>
+          <div className="flex items-center gap-2 border-b border-border pb-3 text-sm font-semibold">
+            <Users className="size-4 text-primary" />
+            Формат гри
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="teams">Команд</Label>
               <Input
+                className="h-11 min-h-11 md:h-11"
+                required
                 id="teams"
                 type="number"
                 min={2}
@@ -167,9 +275,9 @@ export default function NewEventPage() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label>Формат</Label>
+              <Label htmlFor="game-format">Формат</Label>
               <Select value={playersPerTeam} onValueChange={(v) => v && setPlayersPerTeam(v)}>
-                <SelectTrigger>
+                <SelectTrigger className="h-11 min-h-11 md:h-11" id="game-format">
                   <SelectValue>{(n: string) => `${n} на ${n}`}</SelectValue>
                 </SelectTrigger>
                 <SelectContent>
@@ -188,18 +296,34 @@ export default function NewEventPage() {
               <InvitePlayers
                 players={cityPlayers.data}
                 loading={cityPlayers.isLoading}
-                cityName={field.city}
+                cityName={venue?.city.name ?? ''}
                 selected={invitedIds}
-                onChange={(ids) => setInvites({ cityId: field.cityId, ids })}
+                onChange={(ids) => setInvites({ cityId, ids })}
               />
             </div>
           )}
-          <Button type="submit" className="w-full" disabled={create.isPending}>
+          {field && (
+            <p className="text-sm text-muted-foreground">
+              {Number(numberOfTeams) * Number(playersPerTeam)} місць у грі · {venue?.name} ·{' '}
+              {field.name}
+            </p>
+          )}
+          {cityPlayers.isError && field && (
+            <p className="text-sm text-muted-foreground">
+              Не вдалося завантажити гравців для запрошення. Гру можна створити без запрошень.
+            </p>
+          )}
+          <Button
+            type="submit"
+            className="h-12 w-full gap-2"
+            disabled={create.isPending || !field || venues.isFetching}
+          >
             {create.isPending
-              ? '...'
+              ? 'Створюємо гру…'
               : invitedIds.length
                 ? `Створити і запросити (${invitedIds.length})`
-                : 'Створити'}
+                : 'Створити гру'}
+            {!create.isPending && <ArrowRight className="size-4" />}
           </Button>
         </form>
       </Card>

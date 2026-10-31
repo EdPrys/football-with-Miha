@@ -1,0 +1,275 @@
+{
+  "entries": [
+    {
+      "cityId": "kyiv",
+      "name": "X-Park",
+      "address": null,
+      "fields": [
+        {
+          "name": "Відкрите футбольне поле",
+          "capacity": null,
+          "formatEvidence": "Оператор підтверджує три відкриті поля й два криті; число гравців не вказане."
+        }
+      ],
+      "sourceUrl": "https://xpark.kyiv.ua/object/futbol/",
+      "evidence": "Для оренди футбольного поля необхідни попередній запис за номером:",
+      "checkedAt": "2026-10-31",
+      "availability": "rental-confirmed",
+      "notes": "Джерело оренди опубліковане 2017 року, доступне під час перевірки. Поточний стан та графік потребують контакту з оператором."
+    },
+    {
+      "cityId": "kyiv",
+      "name": "Місто Спорту",
+      "address": "Київ, Гідропарк, острів Долобецький",
+      "fields": [
+        {
+          "name": "Нове поле для SOCCA 8×8",
+          "capacity": 16,
+          "formatEvidence": "Офіційний звіт сезону 2025 прямо пов’язує SOCCA 8×8 з новим полем 40×60. 16 = 2 команди по 8; це підтверджений формат, а не абсолютна межа місткості."
+        }
+      ],
+      "sourceUrl": "https://mistosportu.com.ua/",
+      "evidence": "Футбол – поле 1",
+      "checkedAt": "2026-10-31",
+      "availability": "rental-confirmed",
+      "notes": "Назва поля описова, не офіційний номер. Не ототожнювати нове поле 8×8 з полями 1/2/3 без підтвердження оператора.",
+      "additionalSources": [
+        "https://mistosportu.com.ua/u-misti-sportu-startuvav-chempionat-socca-8kh8-osin-2025/",
+        "https://mistosportu.com.ua/kontakty/"
+      ]
+    },
+    {
+      "cityId": "bila-tserkva",
+      "name": "Стадіон ДЮСШ «Зміна»",
+      "address": "Біла Церква, вул. Академіка Вула, 7",
+      "fields": [
+        {
+          "name": "Футбольне поле",
+          "capacity": null,
+          "formatEvidence": "План громади описує поле 100×60 м; кількість гравців не вказана."
+        }
+      ],
+      "sourceUrl": "https://new.bc-rada.gov.ua/miska_rada/vykonavchyi_komitet_miskoi_rady/proiekty_aktiv_vykonavchoho_komitetu/poriadok_dennyi_zasidannia_vykonavchoho_komitetu_22_liutoho_2022_roku/151480.pdf",
+      "evidence": "Футбольне поле використовується щоденно.",
+      "checkedAt": "2026-10-31",
+      "availability": "existence-only",
+      "notes": "План 2024 року повідомляє про зношений газон і потребу капітального ремонту. Це підтвердження існування, не поточної готовності для оренди; сторінки PDF 86 та 144 (відлік від нуля)."
+    },
+    {
+      "cityId": "brovary",
+      "name": "МФК «Бровари»",
+      "address": null,
+      "fields": [
+        {
+          "name": "Пів поля для футболу 8×8",
+          "capacity": 16,
+          "formatEvidence": "Офіційний календар УАФ сезону 2025/26: «Матчі проводяться по формату 8х8, на пів поля»; місце турів 20.09 та 18.10.2025 — «м. Бровари / МФК». 16 = дві команди по 8; це формат частини поля, не місткість усього стадіону."
+        }
+      ],
+      "sourceUrl": "https://brovary-rada.gov.ua/news/u-brovarakh-vidbuvsia-festyval-ampfutbolu-pamiati-polehlykh-voiniv-futbolistiv-brovarskoi-hromady",
+      "evidence": "Першими на футбольне поле МФК «Бровари» вийшли господарі гравці ФК «Ахілес» та запоріжська «Січ».",
+      "checkedAt": "2026-10-31",
+      "availability": "existence-only",
+      "notes": "Підтверджено формат 8×8 для половини поля та офіційні матчі 2025 року. Загальний public/amateur access або погодинна оренда не підтверджені; existence-only збережено. Не переносити формат ампфутболу на звичайний футбол.",
+      "additionalSources": [
+        "https://womensfootball.com.ua/yu-13-divocha-futbolna-liga-ukrainy-2025-26-zatverdzheno-kalendar-matchiv/"
+      ]
+    },
+    {
+      "cityId": "boryspil",
+      "name": "Бориспільський ліцей імені Юрія Головатого",
+      "address": null,
+      "fields": [
+        {
+          "name": "Футбольне поле зі штучним покриттям",
+          "capacity": null,
+          "formatEvidence": "Відкриття поля школи №1 підтверджено міськрадою; гравців не вказано."
+        }
+      ],
+      "sourceUrl": "https://borispol-rada.gov.ua/item/30483-u-boryspilskykh-ditlakhiv-nove-futbolne-pole.html",
+      "evidence": "відкрили футбольне поле зі штучним покриттям та тренажерний майданчик.",
+      "checkedAt": "2026-10-31",
+      "availability": "existence-only",
+      "notes": "Історичне джерело 2017 року. Аукціон 2026 року вимагає освітнього цільового використання, тому вільну оренду для дорослих не вважаємо підтвердженою."
+    },
+    {
+      "cityId": "lutsk",
+      "name": "ФК «Адреналін», поле на проспекті Соборності",
+      "address": "Луцьк, проспект Соборності, 3",
+      "fields": [
+        {
+          "name": "Футбольне поле зі штучним покриттям",
+          "capacity": null,
+          "formatEvidence": "Офіційне відкриття 08.10.2024, наведено розміри 45×65 м; число гравців не вказане."
+        }
+      ],
+      "sourceUrl": "https://www.lutskrada.gov.ua/publications/u-lutsku-vidkryly-nove-futbolne-pole",
+      "evidence": "Спортивний об’єкт облаштувала громадська організація «Футбольний клуб «Адреналін».",
+      "checkedAt": "2026-10-31",
+      "availability": "existence-only",
+      "notes": "Джерело описує використання вихованцями клубу й товариські матчі. Публічну оренду не підтверджено."
+    },
+    {
+      "cityId": "kovel",
+      "name": "МЦФЗН «Спорт для всіх»",
+      "address": "Ковель, вул. Тараса Боровця, 5",
+      "fields": [
+        {
+          "name": "Футбольне поле зі штучним покриттям",
+          "capacity": null,
+          "formatEvidence": "Міська рада прямо описує поле 100×64 м; число гравців не вказане."
+        }
+      ],
+      "sourceUrl": "https://kowelrada.gov.ua/sport/",
+      "evidence": "футбольне поле зі штучним покриттям (розмір 100х64м), 2 стандартні натуральні футбольні поля",
+      "checkedAt": "2026-10-31",
+      "availability": "existence-only",
+      "notes": "Є контакт комунального центру; тарифу та відкритого бронювання джерело не містить."
+    },
+    {
+      "cityId": "zhytomyr",
+      "name": "Спартак Арена",
+      "address": "Житомир, вул. Київська, 51",
+      "fields": [
+        {
+          "name": "Запасне футбольне поле",
+          "capacity": null,
+          "formatEvidence": "У спортивній програмі міста 2021–2024 вказане поле 84×45 м; число гравців не вказане."
+        }
+      ],
+      "sourceUrl": "https://zt-rada.gov.ua/files/upload/sitefiles/doc1611136707.pdf",
+      "evidence": "Запасне футбольне поле 84 х 45 (3780 кв.м) – стадіон «Спартак Арена»",
+      "checkedAt": "2026-10-31",
+      "availability": "existence-only",
+      "notes": "Історичне підтвердження балансу на 01.12.2020, сторінка PDF 54. Поточний стан потребує перевірки; не прирівнювати до діючої оренди."
+    },
+    {
+      "cityId": "berdychiv",
+      "name": "Стадіон ДЮСШ міста Бердичева",
+      "address": "Бердичів, вул. Європейська, 116",
+      "fields": [
+        {
+          "name": "Футбольне поле стадіону ДЮСШ",
+          "capacity": null,
+          "formatEvidence": "Стратегія громади підтверджує стадіон у структурі школи з відділенням футболу. Формат гри не вказано; пропускна спроможність 3000 осіб не є кількістю гравців."
+        }
+      ],
+      "sourceUrl": "https://berdychiv-rada.gov.ua/wp-content/uploads/2024/07/1172.pdf",
+      "evidence": "У структурі знаходяться: стадіон ДЮСШ м.Бердичева (вул.Європейська, 116)",
+      "checkedAt": "2026-10-31",
+      "availability": "existence-only",
+      "notes": "Підтверджений стадіон футбольної ДЮСШ, але окрема характеристика поля відсутня. Потребує перевірки оператором перед імпортом. Джерело: сторінки PDF 74–75."
+    },
+    {
+      "cityId": "uzhhorod",
+      "name": "Стадіон «Авангард»",
+      "address": "Ужгород, вул. Івана Франка, 1",
+      "fields": [
+        {
+          "name": "Футбольне поле",
+          "capacity": null,
+          "formatEvidence": "Оператор описує футбольний турнір, УАФ підтверджує чотири футбольні поля комплексу; число гравців не наведене."
+        }
+      ],
+      "sourceUrl": "https://avanhard.uz.ua/",
+      "evidence": "На футбольному полі зустрілися ФК «Медея» та ФК «Загор».",
+      "checkedAt": "2026-10-31",
+      "availability": "existence-only",
+      "notes": "Підтверджене існування та футбольне використання. Публічної пропозиції оренди не знайдено; 10383/12000 — глядачі, не гравці.",
+      "additionalSources": ["https://fcl.uaf.ua/stadium/avangard-uz"]
+    },
+    {
+      "cityId": "mukachevo",
+      "name": "Відпочинковий комплекс «Комфорт»",
+      "address": "Мукачево, вул. Свято-Михайлівська, мікрорайон Підгоряно",
+      "fields": [
+        {
+          "name": "Мініфутбольний майданчик",
+          "capacity": null,
+          "formatEvidence": "Офіційна міська рада описує відкриття публічного комплексу з мініполем; формат і кількість гравців відсутні."
+        }
+      ],
+      "sourceUrl": "https://t.me/s/Mukachivska_rada?before=49",
+      "evidence": "огороджені міні-поля для гри у футбол та баскетбол",
+      "checkedAt": "2026-10-31",
+      "availability": "existence-only",
+      "notes": "Історична публікація міськради 2019 року. Поточний стан потребує перевірки; не стверджуємо оренду чи бронювання."
+    },
+    {
+      "cityId": "kalush",
+      "name": "Стадіон «Хімік»",
+      "address": null,
+      "fields": [
+        {
+          "name": "Основне поле",
+          "capacity": null,
+          "formatEvidence": "Офіційна сторінка оператора містить погодинний тариф і використання для тренувань/змагань; число гравців відсутнє."
+        },
+        {
+          "name": "Запасне поле",
+          "capacity": null,
+          "formatEvidence": "Там само наведено окремий погодинний тариф запасного поля; число гравців відсутнє."
+        }
+      ],
+      "sourceUrl": "https://kalushcity.gov.ua/kmr/department/komunalne-pidpriyemstvo-sport-arena",
+      "evidence": "стадіон «Хімік» (основне поле) – за 1 год – 3000 грн;",
+      "checkedAt": "2026-10-31",
+      "availability": "rental-confirmed",
+      "notes": "Тарифи затверджено 23.07.2024. Сторінка доступна на дату перевірки; актуальність цін та наявність вільних годин не перевірялася."
+    },
+    {
+      "cityId": "kolomyia",
+      "name": "Стадіон «Юність»",
+      "address": null,
+      "fields": [
+        {
+          "name": "Футбольне поле з трав’яним газоном",
+          "capacity": null,
+          "formatEvidence": "Звіт міського голови за 2024 рік підтверджує використання поля футбольними командами; формат і число гравців не наведені."
+        }
+      ],
+      "sourceUrl": "https://kolrada.gov.ua/storage/files/2/2024%20%D0%B7%D0%B2%D1%96%D1%82%20%D0%BC%D1%96%D1%81%D1%8C%D0%BA%D0%BE%D0%B3%D0%BE%20%D0%B3%D0%BE%D0%BB%D0%BE%D0%B2%D0%B8%20%282%29.pdf",
+      "evidence": "футбольне поле стадіону «Юність»",
+      "checkedAt": "2026-10-31",
+      "availability": "existence-only",
+      "notes": "Джерело підтверджує використання МФК Покуття, Коломия-Сільмаш і ДЮФЛ; загальнодоступна оренда не підтверджена. Сторінка PDF 72."
+    }
+  ],
+  "missing": [
+    {
+      "cityId": "irpin",
+      "reason": "Не верифіковано доступне для аматорської оренди поле: стадіон Чемпіон перебуває у реконструкції; оголошення оренди ліцею Лінгвіст знайдене лише у пошуку, відкрита сторінка не містила цього об’єкта.",
+      "candidateSourceUrls": ["https://dream.gov.ua/ua/pip/DREAM-UA-221225-4EF83A55"]
+    },
+    {
+      "cityId": "vinnytsia",
+      "reason": "Офіційна сторінка Центрального міського стадіону знайдена, але її вміст і PDF АМКУ не вдалося відкрити через timeout. Не включено запис лише за snippet.",
+      "candidateSourceUrls": [
+        "https://www.vmr.gov.ua/komunalne-pidpryiemstvo-tsentralnyi-miskyi-stadion-0"
+      ]
+    },
+    {
+      "cityId": "ivano-frankivsk",
+      "reason": "Операторські сторінки Франківськ Арена підтверджують стадіони Рух і Гірка, проте не дають явної характеристики футбольного поля/формату. Сайт Урагану віддає 429. Не видаємо сторонній довідник за операторське підтвердження оренди.",
+      "candidateSourceUrls": [
+        "https://frankivskarena.if.ua/stadiony/stadion-ruh/",
+        "https://frankivskarena.if.ua/stadiony/stadion-girka/",
+        "https://uragan.if.ua/"
+      ]
+    }
+  ],
+  "rejected": [
+    {
+      "cityId": "mukachevo",
+      "name": "Goodwill Leisure&Sport",
+      "reason": "Власний сайт вказує село Клячаново, а не місто Мукачево; груповий сайт ZET дає неоднозначну адресу. Не підміняємо місто районом.",
+      "sourceUrl": "https://www.goodwill.rest/sport/"
+    },
+    {
+      "cityId": "mukachevo",
+      "name": "СОК ДЮСШ Мукачево",
+      "reason": "Операторський сайт віддає 502; державний реєстр підтверджує футбол як вид спорту, але не є достатньою характеристикою конкретного поля для імпорту.",
+      "sourceUrl": "https://sok-dussh-mukachevo.org.ua/"
+    }
+  ]
+}

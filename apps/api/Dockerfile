@@ -17,6 +17,7 @@ RUN pnpm install --frozen-lockfile
 
 # App source
 COPY packages ./packages
+COPY data/venues ./data/venues
 COPY apps/api ./apps/api
 RUN pnpm --filter @app/db exec prisma generate
 

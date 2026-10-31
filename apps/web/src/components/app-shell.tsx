@@ -31,7 +31,7 @@ function ThemeToggle() {
   return (
     <button
       onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
-      className="rounded-md p-2 text-muted-foreground transition-colors hover:text-foreground"
+      className="inline-flex size-11 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
       aria-label="Перемкнути тему"
     >
       <Sun className="size-5 dark:hidden" />
@@ -60,15 +60,26 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex min-h-dvh flex-col">
-      <header className="sticky top-0 z-20 border-b bg-background/80 backdrop-blur">
+      <a
+        href="#main-content"
+        className="sr-only fixed left-4 top-4 z-50 rounded-lg bg-primary px-4 py-3 text-primary-foreground focus:not-sr-only"
+      >
+        Перейти до вмісту
+      </a>
+      <header className="sticky top-0 z-20 border-b bg-background/95 backdrop-blur">
         <div className="mx-auto flex h-14 max-w-md items-center justify-between px-4 md:h-16 md:max-w-6xl md:px-6">
-          <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight">
-            <Logo className="size-6 text-foreground" />
+          <Link
+            href="/"
+            className="flex min-h-11 items-center gap-2.5 rounded-lg text-lg font-bold tracking-tight"
+          >
+            <span className="flex size-9 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+              <Logo className="size-6" />
+            </span>
             Kopanka
           </Link>
 
           {/* Desktop nav — the bottom tab bar takes over below md */}
-          <nav className="hidden items-center gap-1 md:flex">
+          <nav aria-label="Основна навігація" className="hidden items-center gap-1 md:flex">
             {tabs.map((t) => {
               const active = isActive(t.href);
               const Icon = t.icon;
@@ -76,8 +87,10 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <Link
                   key={t.href}
                   href={t.href}
+                  aria-current={active ? 'page' : undefined}
+                  aria-label={t.label}
                   className={cn(
-                    'flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                    'flex min-h-11 items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-colors',
                     active
                       ? 'bg-primary/10 text-primary'
                       : 'text-muted-foreground hover:bg-muted hover:text-foreground',
@@ -89,7 +102,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                       <UnreadBadge count={unreadCount} />
                     )}
                   </span>
-                  {t.label}
+                  <span className="hidden lg:inline">{t.label}</span>
                 </Link>
               );
             })}
@@ -100,7 +113,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               href="/help"
               aria-label="Як це працює"
               className={cn(
-                'rounded-md p-2 transition-colors hover:text-foreground',
+                'inline-flex size-11 items-center justify-center rounded-xl transition-colors hover:bg-muted hover:text-foreground',
                 pathname === '/help' ? 'text-primary' : 'text-muted-foreground',
               )}
             >
@@ -111,11 +124,17 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-md flex-1 px-4 pb-24 pt-4 md:max-w-6xl md:px-6 md:pb-12 md:pt-8">
+      <main
+        id="main-content"
+        className="mx-auto w-full max-w-md flex-1 px-4 pb-[calc(6rem+env(safe-area-inset-bottom))] pt-5 md:max-w-6xl md:px-6 md:pb-12 md:pt-8"
+      >
         {children}
       </main>
 
-      <nav className="fixed inset-x-0 bottom-0 z-20 border-t bg-background md:hidden">
+      <nav
+        aria-label="Основна навігація"
+        className="fixed inset-x-0 bottom-0 z-20 border-t bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
+      >
         <div className="mx-auto grid max-w-md grid-cols-5">
           {tabs.map((t) => {
             const active = isActive(t.href);
@@ -124,10 +143,13 @@ export function AppShell({ children }: { children: ReactNode }) {
               <Link
                 key={t.href}
                 href={t.href}
+                aria-current={active ? 'page' : undefined}
                 className={cn(
                   // 5 tabs on a 320px phone: smaller labels so they don't touch.
-                  'relative flex min-w-0 flex-col items-center gap-1 py-2.5 text-[10px] transition-colors min-[360px]:text-xs',
-                  active ? 'text-primary' : 'text-muted-foreground hover:text-foreground',
+                  'relative flex min-h-16 min-w-0 flex-col items-center justify-center gap-1 py-2.5 text-[10px] font-medium transition-colors min-[360px]:text-xs',
+                  active
+                    ? 'bg-primary/8 text-primary'
+                    : 'text-muted-foreground hover:bg-muted hover:text-foreground',
                 )}
               >
                 <span className="relative">

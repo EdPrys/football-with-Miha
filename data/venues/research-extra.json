@@ -1,0 +1,24 @@
+{
+  "entries": [
+    {
+      "cityId": "kyiv",
+      "name": "Гран-Прі",
+      "address": "Київ, вул. Володимирська, 101",
+      "fields": [
+        {
+          "name": "Поле для мініфутболу",
+          "capacity": 12,
+          "formatEvidence": "Оператор продає оренду поля для мініфутболу на 12 осіб."
+        }
+      ],
+      "sourceUrl": "https://reserve.grand-prix.kiev.ua/",
+      "additionalSources": [
+        "https://ua.grand-prix.ua/press-center/yak-organizuvati-amatorskiy-turnir-z-mini-futbolu"
+      ],
+      "evidence": "Аренда поля для мини футбола Primetime (12 чел)",
+      "checkedAt": "2026-10-31",
+      "availability": "rental-confirmed"
+    }
+  ],
+  "missing": []
+}

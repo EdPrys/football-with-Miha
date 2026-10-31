@@ -143,12 +143,40 @@ model City {
 }
 
 // ---------- Venues & fields ----------
+enum FieldEnvironment {
+  OPEN_AIR
+  COVERED
+  INDOOR
+}
+
+enum FieldSurface {
+  NATURAL_GRASS
+  ARTIFICIAL_TURF
+  PARQUET
+  RUBBER
+  HARD_COURT
+  OTHER
+}
+
 model Venue {
   id        String   @id @default(cuid())
   name      String
   cityId    String
   city      City     @relation(fields: [cityId], references: [id])
   createdAt DateTime @default(now())
+  address          String?
+  latitude         Float?
+  longitude        Float?
+  contactPhone     String?
+  websiteUrl       String?
+  // Total physical fields, when known; fields.length is only the listed count.
+  totalFields      Int?
+  hasChangingRooms Boolean?
+  hasShowers       Boolean?
+  hasParking       Boolean?
+  sourceUrl        String?
+  // Date the published source was checked, not a guarantee of availability.
+  verifiedAt       DateTime?
 
   fields Field[]
 
@@ -160,8 +188,13 @@ model Field {
   venueId  String
   venue    Venue   @relation(fields: [venueId], references: [id], onDelete: Cascade)
   name     String
-  capacity Int     // supported total players (informational for MVP)
+  capacity Int?    // supported player count; null means not established
   isActive Boolean @default(true)
+  environment  FieldEnvironment?
+  surface      FieldSurface?
+  hasLighting  Boolean?
+  lengthMeters Float?
+  widthMeters  Float?
 
   events Event[]
 }
