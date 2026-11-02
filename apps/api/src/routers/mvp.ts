@@ -6,6 +6,7 @@ export const mvpRouter = router({
   // MVP state of a game: winners once decided; for a player of the match also
   // who they can vote for and their own vote.
   status: publicProcedure
+    .meta({ description: 'Public. Read MVP votes, winners and voting deadline for a game.' })
     .input(z.object({ eventId: z.string().min(1) }))
     .query(async ({ ctx, input }) => {
       const event = await ctx.prisma.event.findUnique({
@@ -78,6 +79,10 @@ export const mvpRouter = router({
     }),
 
   vote: protectedProcedure
+    .meta({
+      description:
+        'Bearer token required. An attendee votes once for another attendee within the 24-hour window.',
+    })
     .input(z.object({ eventId: z.string().min(1), nomineeId: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
       await castMvpVote(ctx.prisma, { ...input, voterId: ctx.user.id });

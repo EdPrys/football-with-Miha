@@ -8,53 +8,64 @@ const ACTIVE: ParticipantStatus[] = [ParticipantStatus.JOINED, ParticipantStatus
 
 export const venuesRouter = router({
   // Venues with their active fields — used by the Create Event form.
-  list: publicProcedure.query(async ({ ctx }) => {
-    return ctx.prisma.venue.findMany({
-      orderBy: { name: 'asc' },
-      include: {
-        city: true,
-        fields: { where: { isActive: true }, orderBy: { name: 'asc' } },
-      },
-    });
-  }),
+  list: publicProcedure
+    .meta({
+      description: 'Public. List venues and active fields. Unknown characteristics remain null.',
+    })
+    .query(async ({ ctx }) => {
+      return ctx.prisma.venue.findMany({
+        orderBy: { name: 'asc' },
+        include: {
+          city: true,
+          fields: { where: { isActive: true }, orderBy: { name: 'asc' } },
+        },
+      });
+    }),
 
   // Venue / stadium profile: fields + upcoming games here.
-  get: publicProcedure.input(z.object({ id: z.string().min(1) })).query(async ({ ctx, input }) => {
-    const venue = await ctx.prisma.venue.findUnique({
-      where: { id: input.id },
-      include: { city: true, fields: { orderBy: { name: 'asc' } } },
-    });
-    if (!venue) throw new DomainError('NOT_FOUND', 'Venue not found');
+  get: publicProcedure
+    .meta({ description: 'Public. Venue details, fields and upcoming games.' })
+    .input(z.object({ id: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      const venue = await ctx.prisma.venue.findUnique({
+        where: { id: input.id },
+        include: { city: true, fields: { orderBy: { name: 'asc' } } },
+      });
+      if (!venue) throw new DomainError('NOT_FOUND', 'Venue not found');
 
-    const events = await ctx.prisma.event.findMany({
-      where: { field: { venueId: input.id }, status: 'UPCOMING', startAt: { gte: new Date() } },
-      orderBy: { startAt: 'asc' },
-      include: {
-        field: true,
-        _count: { select: { participants: { where: { status: { in: ACTIVE } } } } },
-      },
-    });
+      const events = await ctx.prisma.event.findMany({
+        where: { field: { venueId: input.id }, status: 'UPCOMING', startAt: { gte: new Date() } },
+        orderBy: { startAt: 'asc' },
+        include: {
+          field: true,
+          _count: { select: { participants: { where: { status: { in: ACTIVE } } } } },
+        },
+      });
 
-    return {
-      ...venue,
-      city: venue.city.name,
-      events: events.map((e) => {
-        const capacity = eventCapacity(e);
-        return {
-          id: e.id,
-          startAt: e.startAt,
-          endAt: e.endAt,
-          field: e.field.name,
-          playersPerTeam: e.playersPerTeam,
-          availableSlots: Math.max(0, capacity - e._count.participants),
-        };
-      }),
-    };
-  }),
+      return {
+        ...venue,
+        city: venue.city.name,
+        events: events.map((e) => {
+          const capacity = eventCapacity(e);
+          return {
+            id: e.id,
+            startAt: e.startAt,
+            endAt: e.endAt,
+            field: e.field.name,
+            playersPerTeam: e.playersPerTeam,
+            availableSlots: Math.max(0, capacity - e._count.participants),
+          };
+        }),
+      };
+    }),
 
   // Organizers (manager+) create places; players can't, so the catalogue
   // isn't spammed with empty venues.
   create: managerProcedure
+    .meta({
+      description:
+        'MANAGER or ADMIN required. Create a venue in an existing city. Optional metadata must come from verified information.',
+    })
     .input(
       venueDetailsSchema.extend({
         name: z.string().trim().min(1).max(120),
@@ -69,6 +80,10 @@ export const venuesRouter = router({
 
   // An organizer adds a field/hall/room to an existing venue.
   addField: managerProcedure
+    .meta({
+      description:
+        'MANAGER or ADMIN required. Add a field to a venue; capacity and characteristics may be unknown.',
+    })
     .input(
       fieldDetailsSchema.extend({
         venueId: z.string().min(1),
@@ -87,6 +102,10 @@ export const venuesRouter = router({
 
   // Catalogue maintenance belongs to admins; organizers can still add new places.
   update: adminProcedure
+    .meta({
+      description:
+        'ADMIN required. Update venue metadata. Omitted fields are preserved; nullable fields can be cleared.',
+    })
     .input(
       venueDetailsSchema.extend({
         id: z.string().min(1),
@@ -105,6 +124,7 @@ export const venuesRouter = router({
     }),
 
   updateField: adminProcedure
+    .meta({ description: 'ADMIN required. Update field metadata, capacity and active status.' })
     .input(
       fieldDetailsSchema.extend({
         id: z.string().min(1),

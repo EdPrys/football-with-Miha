@@ -22,6 +22,10 @@ const skillValues = z.object(
 export const playersRouter = router({
   // Football profile: self-assessed skills, received stars, matches, attendance.
   profile: publicProcedure
+    .meta({
+      description:
+        'Public. Public football profile: skills, stars, MVP count, matches and attendance.',
+    })
     .input(z.object({ userId: z.string().min(1) }))
     .query(async ({ ctx, input }) => {
       const user = await ctx.prisma.user.findUnique({
@@ -70,6 +74,7 @@ export const playersRouter = router({
 
   // Players based in a city, for an organizer to invite to a game there.
   inCity: managerProcedure
+    .meta({ description: 'MANAGER or ADMIN required. Find players in a city for invitations.' })
     .input(z.object({ cityId: z.string().min(1) }))
     .query(async ({ ctx, input }) => {
       const users = await ctx.prisma.user.findMany({
@@ -86,13 +91,20 @@ export const playersRouter = router({
     }),
 
   // The current player sets their own skills (1–100 each).
-  updateMySkills: protectedProcedure.input(skillValues).mutation(async ({ ctx, input }) => {
-    await setOwnSkills(ctx.prisma, ctx.user.id, input);
-    return { ok: true };
-  }),
+  updateMySkills: protectedProcedure
+    .meta({
+      description:
+        'Bearer token required. Set all six self-assessed skills to integers 1\u2013100; does not change peer stars.',
+    })
+    .input(skillValues)
+    .mutation(async ({ ctx, input }) => {
+      await setOwnSkills(ctx.prisma, ctx.user.id, input);
+      return { ok: true };
+    }),
 
   // Past (finished) matches for a player.
   matchHistory: publicProcedure
+    .meta({ description: 'Public. Finished-game history for a player.' })
     .input(z.object({ userId: z.string().min(1) }))
     .query(async ({ ctx, input }) => {
       const parts = await ctx.prisma.eventParticipant.findMany({

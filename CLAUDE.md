@@ -8,7 +8,7 @@ A **football pickup-game social platform** (not just field booking). The MVP pro
 
 `register → set own skills → find/create event → join → pick position → play → give stars (optional, 24h) → view profile`
 
-Build the MVP around this loop. Do NOT build future features (payments, AI team balancing, detailed positions, chat, recommendations) unless explicitly asked. See `docs/PRODUCT_PLAN.md`.
+Build the MVP around this loop. Do NOT build future features (payments, AI matchmaking, detailed positions, chat, recommendations) unless explicitly asked. See `docs/PRODUCT_PLAN.md`.
 
 ## Stack (locked)
 
@@ -23,7 +23,7 @@ Build the MVP around this loop. Do NOT build future features (payments, AI team 
 
 1. **Domain logic never lives in tRPC procedures or route handlers.** Procedures validate input (zod) → call a `packages/domain` service → persist via Prisma → return. Keep procedures thin.
 2. **Skills are self-assessed; peers give stars.** Players set their six skills 1–100 themselves (`skills/self.ts`). After a game co-players may give each other one 1–5 star score; the shown rating is an isolated, swappable aggregation (`ratings/stars.ts` → `starAggregator`, plain average now). See `docs/SKILLS.md`.
-3. **Invariants are enforced in the domain layer**, not the UI: can't join a full/cancelled/finished event, can't join twice, can't rate yourself / non-participants, one rating per (event, rater, ratee), rating only within 24h after the game is finished (`Event.finishedAt`). A game can be deleted only while nobody has joined it (`deleteEvent`, also removes its Telegram post). A full game grows by one team per extra player up to `MAX_TEAMS` = 4 (`joinEvent` with `newTeam`). Organizers can rebalance teams by stars before kick-off (`events/balance.ts`).
+3. **Invariants are enforced in the domain layer**, not the UI: can't join a full/cancelled/finished event, can't join twice, can't rate yourself / non-participants, one rating per (event, rater, ratee), rating only within 24h after the game is finished (`Event.finishedAt`). An unfinished game can be deleted only while it has no active participants (`deleteEvent`, also removes its Telegram post). A full game grows by one team per extra player up to `MAX_TEAMS` = 4 (`joinEvent` with `newTeam`). Organizers can rebalance teams by stars before kick-off (`events/balance.ts`).
 4. **State machines** for Event, Participant, Invitation status transitions — centralize allowed transitions in domain, don't scatter status checks. Games still open 1h after `endAt` are closed by `finishOverdueEvents` (run every 5 min from `apps/api/src/jobs/scheduler.ts`): finished like the button, or cancelled if nobody joined.
 5. **Shared types come from packages** (`@app/db` Prisma types, `@app/domain` enums/DTOs). Don't redefine enums per app.
 6. Develop **vertically** (full loop first), not entity-by-entity.
@@ -54,7 +54,7 @@ Frontends: `apps/web` (players), `apps/admin-web` (admin — user role mgmt + ve
 ```bash
 pnpm db:up        # start Postgres (docker)
 pnpm db:migrate   # run prisma migrate dev
-pnpm db:seed      # seed venues/fields/dev users
+pnpm db:seed      # verified venues/fields; no demo users
 pnpm db:studio    # prisma studio
 pnpm dev          # run all apps in parallel
 pnpm typecheck    # typecheck all packages
@@ -68,12 +68,18 @@ pnpm typecheck    # typecheck all packages
 - Money/time: store timestamps as UTC. Event capacity = `numberOfTeams * playersPerTeam` (derived, never stored redundantly).
 - Auth: JWT (access token), password hashed with argon2/bcrypt.
 
-## Roadmap (vertical slices)
+## Current status and documentation
 
-0. Foundation — monorepo, Postgres, Prisma schema, migration ← current
-1. Auth (register/login)
-2. Venue/Field + Create Event
-3. Discover + Join (invariants)
-4. Event management (teams, start/finish)
-5. Rating (after FINISHED)
-6. Skills aggregation + Profile
+Backend loop, player/organizer web and admin web are implemented. React Native
+is future work. Do not use the former foundation-only roadmap as implementation status.
+
+- Start and onboard: `README.md`.
+- Live tRPC explorer: API `/api-panel`, see `docs/API.md`. Add `.meta({ description })`
+  to procedures, document access and side effects. Production panel is opt-in via
+  `API_PANEL_ENABLED=true`; normal API authorization still applies.
+- Deployment and env/ports: `docs/DEPLOYMENT.md`.
+- Current business rules: `docs/PRODUCT_PLAN.md`, `docs/SKILLS.md`.
+- Data model and request flow: `docs/ARCHITECTURE.md`.
+
+Update these docs with behavior/config changes. Prisma seed imports the verified
+catalogue only; never document default admin credentials that do not exist.

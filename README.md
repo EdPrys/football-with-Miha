@@ -1,48 +1,97 @@
-# Football App ⚽
+# Kopanka ⚽
 
-A football **pickup-game social platform** — find or organize casual matches, join,
-play, rate the players you played with, and build a skill profile from those ratings.
+Платформа аматорського футболу: знайти або створити гру → приєднатися й обрати
+позицію → зіграти → оцінити партнерів → переглянути профіль.
 
-> MVP in progress. See [`docs/PRODUCT_PLAN.md`](docs/PRODUCT_PLAN.md),
-> [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), [`docs/SKILLS.md`](docs/SKILLS.md),
-> and [`CLAUDE.md`](CLAUDE.md).
+Працюють API, вебзастосунок гравців та окрема адмінпанель. Мобільний застосунок
+ще не реалізовано. Документація звірена з кодом 2026-11-02.
 
-## The core loop
+## Перший запуск
 
-```
-register → find/create event → join + pick position → play →
-organizer finishes → rate players → skills recomputed → view profile
-```
+Потрібні Node.js 22 (Docker images використовують 22), pnpm 9.15.0 і Docker Compose.
+Усі команди нижче виконуються з кореня репозиторію.
 
-## Stack
-
-pnpm monorepo · **Fastify + tRPC + Prisma + PostgreSQL** (API) · Next.js web (planned) ·
-React Native mobile (planned) · shared domain logic & types in workspace packages.
-
-```
-apps/api        Fastify + tRPC server (exports AppRouter type)
-packages/db     Prisma schema + client
-packages/domain pure business logic (invariants, state machines, skill aggregation)
-```
-
-## Roles
-
-`PLAYER < MANAGER < ADMIN` — everyone can play; managers create events; admins
-create venues/fields and manage users. A separate admin web app is planned.
-
-## Getting started
-
-```bash
-corepack enable                 # provides pnpm
-pnpm install
-pnpm db:up                      # Postgres via Docker
-pnpm db:migrate                 # apply migrations
-pnpm db:seed                    # seed venues/fields
-pnpm --filter @app/api start    # run the API on :4000
-pnpm test                       # run all tests
+```sh
+corepack enable
+pnpm install --frozen-lockfile
+cp .env.example .env
+# Prisma CLI читає env біля свого пакета; використовуємо ту саму конфігурацію.
+# Для нового checkout, де packages/db/.env ще відсутній:
+ln -s ../../.env packages/db/.env
+pnpm db:up
+pnpm db:generate
+pnpm --filter @app/db migrate:deploy
+pnpm db:seed
 ```
 
-## Status
+Не перезаписуйте наявні `.env`: перевірте, що DATABASE_URL вказує на локальну БД.
+Міграції додають міста; seed імпортує перевірений каталог майданчиків і полів;
+демокористувачів, паролів і матчів не створює. Зареєструйте власний тестовий акаунт.
 
-Backend MVP loop complete (auth, events, roles, join/leave, management,
-ratings, skills, profiles) with 30+ unit tests. Web/mobile UIs next.
+Next.js читає власні env-файли, тому створіть їх окремо:
+
+```sh
+printf '%s\n' 'NEXT_PUBLIC_API_URL=http://localhost:4000' > apps/web/.env.local
+printf '%s\n' 'NEXT_PUBLIC_API_URL=http://localhost:4000' > apps/admin-web/.env.local
+pnpm dev
+```
+
+Для frontend обов'язковий лише `NEXT_PUBLIC_API_URL=http://localhost:4000`.
+Секрети API в frontend env не потрібні; жоден секрет не повинен мати префікс
+`NEXT_PUBLIC_`. API dev/start завантажують кореневий `.env`.
+
+| Сервіс                  | Локальна адреса                 | Пакет            |
+| ----------------------- | ------------------------------- | ---------------- |
+| Вебзастосунок           | http://localhost:3000           | `@app/web`       |
+| Адмінпанель             | http://localhost:3001           | `@app/admin-web` |
+| API health              | http://localhost:4000/health    | `@app/api`       |
+| Інтерактивна API-панель | http://localhost:4000/api-panel | `@app/api`       |
+| tRPC transport          | http://localhost:4000/trpc      | `@app/api`       |
+
+## Перший сценарій
+
+1. Відкрийте `/api-panel`, виконайте `auth.register` або `auth.login`.
+2. Додайте в Headers `Authorization: Bearer <token>`, перевірте `auth.me`.
+3. Виконайте `users.requestOrganizer` — зараз роль MANAGER надається автоматично.
+4. Через `venues.list` оберіть поле; створіть майбутню гру через `events.create`.
+5. Приєднайтеся через `events.join`. Для перевірки взаємних оцінок потрібні два акаунти.
+6. Організатор виконує `events.start`, потім `events.finish`; учасники можуть
+   оцінювати співучасників і голосувати за MVP протягом 24 годин.
+
+Дати та приклади запитів: [API.md](docs/API.md). Новий акаунт має роль PLAYER.
+Для локальної адмінпанелі змініть роль свого тестового користувача на ADMIN
+через `pnpm db:studio`; seed не створює адміністратора.
+
+## Структура й документація
+
+```text
+apps/api          Fastify 5 + tRPC 11 + Zod 3 + SuperJSON
+apps/web          Next.js 16 + React 19: інтерфейс гравців та організаторів
+apps/admin-web    Next.js: керування користувачами й каталогом
+packages/domain   бізнес-правила та їхні тести
+packages/db       Prisma 6: схема, міграції, каталог
+```
+
+- [API: панель, авторизація, процедури й приклади](docs/API.md)
+- [Архітектура, модель даних та місця змін](docs/ARCHITECTURE.md)
+- [Деплой, змінні середовища й діагностика](docs/DEPLOYMENT.md)
+- [Поточні правила продукту](docs/PRODUCT_PLAN.md)
+- [Навички, зірки та MVP](docs/SKILLS.md)
+- [Перевірений каталог майданчиків](data/venues/README.md)
+- [Незавершені задачі та перевірки](docs/BACKLOG.md)
+- [Інструкції для внесення змін](CLAUDE.md)
+
+## Перевірки та розробка
+
+```sh
+pnpm typecheck
+pnpm test
+pnpm build                 # frontend production builds
+pnpm --filter @app/api dev # лише API
+pnpm db:migrate            # створити локальну міграцію після зміни schema.prisma
+pnpm db:studio
+```
+
+Commit містить зміни схеми разом із міграцією. На сервері застосовуйте
+`migrate:deploy`, а не `migrate:dev`. Тести API/domain використовують підміни
+репозиторіїв; вони не замінюють перевірку реального сценарію з PostgreSQL.

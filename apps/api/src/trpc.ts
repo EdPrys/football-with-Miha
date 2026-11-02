@@ -1,18 +1,22 @@
 import { initTRPC, TRPCError } from '@trpc/server';
+import type { TRPCPanelMeta } from 'trpc-ui';
 import superjson from 'superjson';
 import { ZodError } from 'zod';
 import { DomainError, roleAtLeast, type DomainErrorCode, type RoleName } from '@app/domain';
 import type { Context } from './context.js';
 
-const t = initTRPC.context<Context>().create({
-  transformer: superjson,
-  // Expose zod failures per field so clients can show a readable message
-  // instead of the raw issue list serialized into `message`.
-  errorFormatter({ shape, error }) {
-    const zodError = error.cause instanceof ZodError ? error.cause.flatten().fieldErrors : null;
-    return { ...shape, data: { ...shape.data, zodError } };
-  },
-});
+const t = initTRPC
+  .context<Context>()
+  .meta<TRPCPanelMeta>()
+  .create({
+    transformer: superjson,
+    // Expose zod failures per field so clients can show a readable message
+    // instead of the raw issue list serialized into `message`.
+    errorFormatter({ shape, error }) {
+      const zodError = error.cause instanceof ZodError ? error.cause.flatten().fieldErrors : null;
+      return { ...shape, data: { ...shape.data, zodError } };
+    },
+  });
 
 const CODE_MAP: Record<DomainErrorCode, TRPCError['code']> = {
   VALIDATION: 'BAD_REQUEST',

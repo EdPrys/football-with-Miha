@@ -1,4 +1,5 @@
 import Fastify from 'fastify';
+import { env } from './env.js';
 import cors from '@fastify/cors';
 import { fastifyTRPCPlugin } from '@trpc/server/adapters/fastify';
 import { appRouter } from './routers/index.js';
@@ -12,6 +13,32 @@ export function buildServer() {
   // origin for local dev. Auth is via bearer token, so credentials stay off.
   const origin = process.env.WEB_ORIGIN ? process.env.WEB_ORIGIN.split(',') : true;
   app.register(cors, { origin, credentials: false });
+
+  // The panel executes real API calls; production requires an explicit opt-in.
+  const panelEnabled =
+    env.API_PANEL_ENABLED === 'true' ||
+    (env.API_PANEL_ENABLED === undefined && env.NODE_ENV === 'development');
+  if (panelEnabled) {
+    let panelHtml: string | undefined;
+    app.get('/api-panel', async (_req, reply) => {
+      if (!panelHtml) {
+        const { renderTrpcPanel } = await import('trpc-ui');
+        panelHtml = renderTrpcPanel(appRouter, {
+          url: '/trpc',
+          transformer: 'superjson',
+          meta: {
+            title: 'Kopanka API',
+            description:
+              'Live API explorer. Mutations change this environment. For protected procedures add an Authorization header: Bearer <token> from auth.login or auth.register. Dates use SuperJSON; see docs/API.md in the repository.',
+          },
+        });
+      }
+      return reply
+        .header('Cache-Control', 'no-store')
+        .type('text/html; charset=utf-8')
+        .send(panelHtml);
+    });
+  }
 
   app.get('/health', async () => ({ status: 'ok' }));
 

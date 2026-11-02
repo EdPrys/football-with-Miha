@@ -24,6 +24,10 @@ const avatarInput = z.union([
 export const usersRouter = router({
   // Set or clear your avatar: an https image link or an uploaded image (data URL).
   updateAvatar: protectedProcedure
+    .meta({
+      description:
+        'Bearer token required. Set an HTTPS avatar URL, supported image data URL, or null to clear.',
+    })
     .input(z.object({ avatarUrl: avatarInput.nullable() }))
     .mutation(async ({ ctx, input }) => {
       const avatarUrl =
@@ -39,6 +43,7 @@ export const usersRouter = router({
 
   // Change the city you are based in (organizers invite players by city).
   updateCity: protectedProcedure
+    .meta({ description: 'Bearer token required. Set the current user city.' })
     .input(z.object({ cityId: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
       await setUserCity(ctx.prisma, ctx.user.id, input.cityId);
@@ -46,13 +51,19 @@ export const usersRouter = router({
     }),
 
   // A player asks to become an organizer (auto-approved for now, see domain).
-  requestOrganizer: protectedProcedure.mutation(async ({ ctx }) => {
-    const request = await requestOrganizerRole(ctx.prisma, ctx.user.id);
-    return { status: request.status };
-  }),
+  requestOrganizer: protectedProcedure
+    .meta({
+      description:
+        'Bearer token required. Request MANAGER role. Currently auto-approved; ADMIN is never self-service.',
+    })
+    .mutation(async ({ ctx }) => {
+      const request = await requestOrganizerRole(ctx.prisma, ctx.user.id);
+      return { status: request.status };
+    }),
 
   // Look a teammate up by email to invite them to an event.
   findByEmail: protectedProcedure
+    .meta({ description: 'Bearer token required. Find a teammate by email for invitations.' })
     .input(z.object({ email: z.string().email() }))
     .query(async ({ ctx, input }) => {
       return ctx.prisma.user.findUnique({
@@ -62,15 +73,18 @@ export const usersRouter = router({
     }),
 
   // Admin: the full user directory, for role management.
-  list: adminProcedure.query(async ({ ctx }) => {
-    return ctx.prisma.user.findMany({
-      orderBy: { createdAt: 'desc' },
-      select: { id: true, name: true, email: true, role: true, createdAt: true },
-    });
-  }),
+  list: adminProcedure
+    .meta({ description: 'ADMIN required. User directory for role management.' })
+    .query(async ({ ctx }) => {
+      return ctx.prisma.user.findMany({
+        orderBy: { createdAt: 'desc' },
+        select: { id: true, name: true, email: true, role: true, createdAt: true },
+      });
+    }),
 
   // Admin: promote/demote a user. PLAYER < MANAGER < ADMIN.
   setRole: adminProcedure
+    .meta({ description: 'ADMIN required. Set PLAYER, MANAGER or ADMIN role.' })
     .input(z.object({ userId: z.string().min(1), role: z.nativeEnum(Role) }))
     .mutation(async ({ ctx, input }) => {
       await ctx.prisma.user.update({ where: { id: input.userId }, data: { role: input.role } });

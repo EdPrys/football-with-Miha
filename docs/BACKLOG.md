@@ -1,19 +1,27 @@
-# Backlog
+# Backlog and verification
 
-Agreed tasks that are not built yet. Move an item out when it ships.
+Updated 2026-11-02. Code existence and production verification are separate.
 
-## 1. Telegram channel: auto-post new games
+## Production checks
 
-**Goal:** when a game is created in the app, a post appears in the Telegram channel.
+- Verify Telegram bot/channel variables and posting permissions in the intended deployment.
+  Posting, stored message id, deletion of an empty game's post and Europe/Kyiv formatting
+  are implemented. Do not treat the former timezone task as missing code.
+- Verify GA4/Meta events and UTM registration attribution end to end before advertising.
+  See `MARKETING_PILOT.md`; no campaign launch is recorded there.
+- Confirm actual service ports, domains and health in the intended Coolify deployment;
+  the reported 502 needs runtime/container logs. See `DEPLOYMENT.md`.
+- Smoke-test the complete two-player flow against a dedicated test database.
 
-Already in code: `apps/api/src/integrations/telegram.ts` + `event-announcement.ts`,
-called from `events.create`. It is a silent no-op until configured.
+## Product decisions
 
-To do:
+- Decide whether Telegram posts should be edited as places fill or games are cancelled.
+  Deleting an empty game already requests deletion of its stored Telegram post.
+- Choose city, live matches, budget and channel for the first marketing test.
+- Review automatic approval of organizer role before changing access policy.
 
-- [ ] Create the bot (@BotFather) and the channel; add the bot as a channel admin.
-- [ ] Railway → api variables: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` (channel `@name` or `-100…` id),
-      `APP_URL=https://kopanka.pro` (link in the post; currently falls back to localhost).
-- [ ] Fix post time zone: formatters run on the server (UTC on Railway) — add `timeZone: 'Europe/Kyiv'`.
-- [ ] Post text: free slots, organizer; check how the link preview looks.
-- [ ] Decide: edit/delete the post when a game is cancelled or fills up? (optional)
+## Developer onboarding
+
+API explorer and setup/API/architecture/deployment documentation are now in the
+repository. Keep procedure metadata and docs synchronized with implementation.
+No React Native app, payment or external field-booking integration is implemented.

@@ -10,6 +10,10 @@ import { router, protectedProcedure } from '../trpc.js';
 
 export const invitationsRouter = router({
   send: protectedProcedure
+    .meta({
+      description:
+        'Bearer token required. Invite a player to a game; domain checks access and game state.',
+    })
     .input(z.object({ eventId: z.string().min(1), invitedUserId: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
       const invitation = await inviteToEvent(ctx.prisma, {
@@ -22,6 +26,7 @@ export const invitationsRouter = router({
 
   // Invite several players to an existing game at once.
   sendMany: protectedProcedure
+    .meta({ description: 'Bearer token required. Invite a batch of players to a game.' })
     .input(
       z.object({
         eventId: z.string().min(1),
@@ -40,6 +45,9 @@ export const invitationsRouter = router({
   // Players based in the game's city who can still be invited: not the
   // organizer, not already in the game and without a pending invitation.
   candidates: protectedProcedure
+    .meta({
+      description: 'Bearer token required. Players in the game city who can still be invited.',
+    })
     .input(z.object({ eventId: z.string().min(1) }))
     .query(async ({ ctx, input }) => {
       const event = await ctx.prisma.event.findUnique({
@@ -69,18 +77,24 @@ export const invitationsRouter = router({
     }),
 
   // Invitations sent to the current user, newest first.
-  received: protectedProcedure.query(async ({ ctx }) => {
-    return ctx.prisma.invitation.findMany({
-      where: { invitedUserId: ctx.user.id },
-      orderBy: { createdAt: 'desc' },
-      include: {
-        event: { include: { field: { include: { venue: true } } } },
-        inviter: { select: { id: true, name: true, avatarUrl: true } },
-      },
-    });
-  }),
+  received: protectedProcedure
+    .meta({ description: 'Bearer token required. Invitations received by the current user.' })
+    .query(async ({ ctx }) => {
+      return ctx.prisma.invitation.findMany({
+        where: { invitedUserId: ctx.user.id },
+        orderBy: { createdAt: 'desc' },
+        include: {
+          event: { include: { field: { include: { venue: true } } } },
+          inviter: { select: { id: true, name: true, avatarUrl: true } },
+        },
+      });
+    }),
 
   respond: protectedProcedure
+    .meta({
+      description:
+        'Bearer token required. Accept or decline an invitation addressed to the current user.',
+    })
     .input(z.object({ invitationId: z.string().min(1), accept: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       const invitation = await respondToInvitation(ctx.prisma, {

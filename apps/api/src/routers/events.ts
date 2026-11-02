@@ -28,6 +28,10 @@ const ACTIVE_STATUSES: ParticipantStatus[] = [ParticipantStatus.JOINED, Particip
 
 export const eventsRouter = router({
   create: managerProcedure
+    .meta({
+      description:
+        'MANAGER or ADMIN required. Create a game as organizer. startAt/endAt are Date values (SuperJSON). Returns id and invitation count.',
+    })
     .input(
       z.object({
         fieldId: z.string().min(1),
@@ -59,6 +63,10 @@ export const eventsRouter = router({
 
   // Discovery feed: upcoming events with free-slot info and simple filters.
   list: publicProcedure
+    .meta({
+      description:
+        'Public. Discover upcoming games; optional date range, format and availability filters.',
+    })
     .input(
       z
         .object({
@@ -111,76 +119,87 @@ export const eventsRouter = router({
     }),
 
   // Events the current user organizes or actively participates in.
-  mine: protectedProcedure.query(async ({ ctx }) => {
-    const events = await ctx.prisma.event.findMany({
-      where: {
-        OR: [
-          { organizerId: ctx.user.id },
-          { participants: { some: { userId: ctx.user.id, status: { in: ACTIVE_STATUSES } } } },
-        ],
-      },
-      orderBy: { startAt: 'desc' },
-      include: {
-        field: { include: { venue: true } },
-        _count: { select: { participants: { where: { status: { in: ACTIVE_STATUSES } } } } },
-      },
-    });
-    return events.map((e) => {
-      const capacity = eventCapacity(e);
-      return {
-        id: e.id,
-        startAt: e.startAt,
-        endAt: e.endAt,
-        status: e.status,
-        playersPerTeam: e.playersPerTeam,
-        venue: e.field.venue.name,
-        field: e.field.name,
-        isOrganizer: e.organizerId === ctx.user.id,
-        joinedCount: e._count.participants,
-        capacity,
-        availableSlots: Math.max(0, capacity - e._count.participants),
-      };
-    });
-  }),
+  mine: protectedProcedure
+    .meta({ description: 'Bearer token required. Games organized or joined by the current user.' })
+    .query(async ({ ctx }) => {
+      const events = await ctx.prisma.event.findMany({
+        where: {
+          OR: [
+            { organizerId: ctx.user.id },
+            { participants: { some: { userId: ctx.user.id, status: { in: ACTIVE_STATUSES } } } },
+          ],
+        },
+        orderBy: { startAt: 'desc' },
+        include: {
+          field: { include: { venue: true } },
+          _count: { select: { participants: { where: { status: { in: ACTIVE_STATUSES } } } } },
+        },
+      });
+      return events.map((e) => {
+        const capacity = eventCapacity(e);
+        return {
+          id: e.id,
+          startAt: e.startAt,
+          endAt: e.endAt,
+          status: e.status,
+          playersPerTeam: e.playersPerTeam,
+          venue: e.field.venue.name,
+          field: e.field.name,
+          isOrganizer: e.organizerId === ctx.user.id,
+          joinedCount: e._count.participants,
+          capacity,
+          availableSlots: Math.max(0, capacity - e._count.participants),
+        };
+      });
+    }),
 
   // Full event detail for the Event page.
-  get: publicProcedure.input(z.object({ id: z.string().min(1) })).query(async ({ ctx, input }) => {
-    const event = await ctx.prisma.event.findUnique({
-      where: { id: input.id },
-      include: {
-        field: { include: { venue: { include: { city: true } } } },
-        organizer: { select: { id: true, name: true, avatarUrl: true } },
-        teams: { orderBy: { name: 'asc' } },
-        participants: {
-          where: { status: { in: ACTIVE_STATUSES } },
-          include: { user: { select: { id: true, name: true, avatarUrl: true } } },
-          orderBy: { joinedAt: 'asc' },
+  get: publicProcedure
+    .meta({
+      description: 'Public. Game detail, teams, participants, star summaries and available slots.',
+    })
+    .input(z.object({ id: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      const event = await ctx.prisma.event.findUnique({
+        where: { id: input.id },
+        include: {
+          field: { include: { venue: { include: { city: true } } } },
+          organizer: { select: { id: true, name: true, avatarUrl: true } },
+          teams: { orderBy: { name: 'asc' } },
+          participants: {
+            where: { status: { in: ACTIVE_STATUSES } },
+            include: { user: { select: { id: true, name: true, avatarUrl: true } } },
+            orderBy: { joinedAt: 'asc' },
+          },
         },
-      },
-    });
-    if (!event) throw new DomainError('NOT_FOUND', 'Event not found');
+      });
+      if (!event) throw new DomainError('NOT_FOUND', 'Event not found');
 
-    const capacity = eventCapacity(event);
-    const userIds = event.participants.map((p) => p.userId);
-    const [stars, mvps] = await Promise.all([
-      starSummariesFor(ctx.prisma, userIds),
-      mvpCountsFor(ctx.prisma, userIds),
-    ]);
-    return {
-      ...event,
-      participants: event.participants.map((p) => ({
-        ...p,
-        user: { ...p.user, stars: stars.get(p.userId)!, mvpCount: mvps.get(p.userId) ?? 0 },
-      })),
-      ratingClosesAt: ratingClosesAt(event.finishedAt),
-      capacity,
-      joinedCount: event.participants.length,
-      availableSlots: Math.max(0, capacity - event.participants.length),
-      canAddTeam: canAddTeam(event, event.participants.length),
-    };
-  }),
+      const capacity = eventCapacity(event);
+      const userIds = event.participants.map((p) => p.userId);
+      const [stars, mvps] = await Promise.all([
+        starSummariesFor(ctx.prisma, userIds),
+        mvpCountsFor(ctx.prisma, userIds),
+      ]);
+      return {
+        ...event,
+        participants: event.participants.map((p) => ({
+          ...p,
+          user: { ...p.user, stars: stars.get(p.userId)!, mvpCount: mvps.get(p.userId) ?? 0 },
+        })),
+        ratingClosesAt: ratingClosesAt(event.finishedAt),
+        capacity,
+        joinedCount: event.participants.length,
+        availableSlots: Math.max(0, capacity - event.participants.length),
+        canAddTeam: canAddTeam(event, event.participants.length),
+      };
+    }),
 
   join: protectedProcedure
+    .meta({
+      description:
+        'Bearer token required. Join an upcoming game as GK, DEF, MID or FWD. newTeam opens an additional team only when full (growth up to 4 teams).',
+    })
     .input(
       z.object({
         eventId: z.string().min(1),
@@ -202,6 +221,7 @@ export const eventsRouter = router({
     }),
 
   leave: protectedProcedure
+    .meta({ description: 'Bearer token required. Leave a game as the current participant.' })
     .input(z.object({ eventId: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
       await leaveEvent(ctx.prisma, { eventId: input.eventId, userId: ctx.user.id });
@@ -210,6 +230,7 @@ export const eventsRouter = router({
 
   // --- Organizer management (organizer identity enforced in the domain layer) ---
   start: protectedProcedure
+    .meta({ description: 'Bearer token required. Organizer only: start the game.' })
     .input(z.object({ eventId: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
       const e = await startEvent(ctx.prisma, { eventId: input.eventId, organizerId: ctx.user.id });
@@ -217,6 +238,10 @@ export const eventsRouter = router({
     }),
 
   finish: protectedProcedure
+    .meta({
+      description:
+        'Bearer token required. Organizer only: finish the game and open the 24-hour ratings/MVP window.',
+    })
     .input(z.object({ eventId: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
       const e = await finishEvent(ctx.prisma, { eventId: input.eventId, organizerId: ctx.user.id });
@@ -224,6 +249,7 @@ export const eventsRouter = router({
     }),
 
   cancel: protectedProcedure
+    .meta({ description: 'Bearer token required. Organizer only: cancel the game.' })
     .input(z.object({ eventId: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
       const e = await cancelEvent(ctx.prisma, { eventId: input.eventId, organizerId: ctx.user.id });
@@ -232,6 +258,10 @@ export const eventsRouter = router({
 
   // Only while nobody has joined; also removes the channel post.
   delete: protectedProcedure
+    .meta({
+      description:
+        'Bearer token required. Organizer only: delete an empty unfinished game and remove its Telegram post if present.',
+    })
     .input(z.object({ eventId: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
       const { telegramMessageId } = await deleteEvent(ctx.prisma, {
@@ -244,6 +274,10 @@ export const eventsRouter = router({
 
   // Reshuffle players into teams of equal strength by stars.
   balanceTeams: protectedProcedure
+    .meta({
+      description:
+        'Bearer token required. Organizer only: balance teams by received stars before kick-off.',
+    })
     .input(z.object({ eventId: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
       const moved = await rebalanceEventTeams(ctx.prisma, {

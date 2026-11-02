@@ -20,6 +20,10 @@ function publicUser(user: User) {
 
 export const authRouter = router({
   register: publicProcedure
+    .meta({
+      description:
+        'Public. Create a PLAYER account and profile; returns token and user. Password: 8+ characters, a Latin letter and a digit.',
+    })
     .input(
       z.object({
         name: z.string().min(1).max(80),
@@ -47,6 +51,7 @@ export const authRouter = router({
     }),
 
   login: publicProcedure
+    .meta({ description: 'Public. Exchange email and password for a JWT token and user.' })
     .input(z.object({ email: z.string().email(), password: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const user = await ctx.prisma.user.findUnique({ where: { email: input.email } });
@@ -56,11 +61,15 @@ export const authRouter = router({
       return { token: signToken(user.id), user: publicUser(user) };
     }),
 
-  me: protectedProcedure.query(async ({ ctx }) => {
-    const profile = await ctx.prisma.playerProfile.findUnique({
-      where: { userId: ctx.user.id },
-      include: { skills: true },
-    });
-    return { user: publicUser(ctx.user), profile };
-  }),
+  me: protectedProcedure
+    .meta({
+      description: 'Bearer token required. Return the authenticated user and self-assessed skills.',
+    })
+    .query(async ({ ctx }) => {
+      const profile = await ctx.prisma.playerProfile.findUnique({
+        where: { userId: ctx.user.id },
+        include: { skills: true },
+      });
+      return { user: publicUser(ctx.user), profile };
+    }),
 });

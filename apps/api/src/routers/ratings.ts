@@ -6,6 +6,10 @@ export const ratingsRouter = router({
   // Co-attendees of a finished event that the current user hasn't rated yet,
   // plus when rating closes (24h after the finish). Empty once closed.
   rateableTargets: protectedProcedure
+    .meta({
+      description:
+        'Bearer token required. Unrated co-attendees of a finished game and the rating deadline. Empty when unavailable.',
+    })
     .input(z.object({ eventId: z.string().min(1) }))
     .query(async ({ ctx, input }) => {
       const event = await ctx.prisma.event.findUnique({
@@ -45,6 +49,10 @@ export const ratingsRouter = router({
 
   // Stars for the whole list at once; players left at 0 stars aren't rated.
   submit: protectedProcedure
+    .meta({
+      description:
+        'Bearer token required. Submit peer stars within 24 hours of finish. 1\u20135 saves a rating; 0 skips. Immutable, atomic batch; no self-rating.',
+    })
     .input(
       z.object({
         eventId: z.string().min(1),
