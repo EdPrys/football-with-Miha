@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import {
   createEvent,
+  repeatEventTemplate,
   eventCapacity,
   invitePlayers,
   joinEvent,
@@ -18,7 +19,7 @@ import {
   starSummariesFor,
   mvpCountsFor,
 } from '@app/domain';
-import { ParticipantStatus, Position, type Prisma, type PrismaClient } from '@app/db';
+import { ParticipantStatus, Position, GameLevel, type Prisma, type PrismaClient } from '@app/db';
 import { router, publicProcedure, protectedProcedure, managerProcedure } from '../trpc.js';
 import { deleteTelegramMessage, postToTelegram } from '../integrations/telegram.js';
 import { eventAnnouncementText } from '../integrations/event-announcement.js';
@@ -27,6 +28,14 @@ import { eventAnnouncementText } from '../integrations/event-announcement.js';
 const ACTIVE_STATUSES: ParticipantStatus[] = [ParticipantStatus.JOINED, ParticipantStatus.ATTENDED];
 
 export const eventsRouter = router({
+  repeatTemplate: managerProcedure
+    .meta({
+      description:
+        'Organizer only. Return game settings for a new creation form; never copy participants, invitations or results.',
+    })
+    .input(z.object({ eventId: z.string().min(1) }))
+    .query(({ ctx, input }) => repeatEventTemplate(ctx.prisma, input.eventId, ctx.user.id)),
+
   create: managerProcedure
     .meta({
       description:
@@ -39,6 +48,15 @@ export const eventsRouter = router({
         endAt: z.date(),
         numberOfTeams: z.number().int().min(2),
         playersPerTeam: z.number().int().min(MIN_PLAYERS_PER_TEAM).max(MAX_PLAYERS_PER_TEAM),
+        priceMinor: z
+          .number()
+          .int()
+          .min(0)
+          .max(100_000_000)
+          .nullish()
+          .describe('Price per player in UAH kopecks; null = unspecified, 0 = free.'),
+        level: z.nativeEnum(GameLevel).nullish(),
+        newcomerInfo: z.string().trim().max(2000).nullish(),
         // Players to invite right away (picked from the game's city).
         invitedUserIds: z.array(z.string().min(1)).max(200).default([]),
       }),
@@ -65,11 +83,12 @@ export const eventsRouter = router({
   list: publicProcedure
     .meta({
       description:
-        'Public. Discover upcoming games; optional date range, format and availability filters.',
+        'Public. Discover upcoming games; optional city, date range, format and availability filters.',
     })
     .input(
       z
         .object({
+          cityId: z.string().min(1).optional(),
           dateFrom: z.date().optional(),
           dateTo: z.date().optional(),
           playersPerTeam: z.number().int().min(1).optional(),
@@ -80,6 +99,7 @@ export const eventsRouter = router({
     .query(async ({ ctx, input }) => {
       const where: Prisma.EventWhereInput = {
         status: 'UPCOMING',
+        ...(input?.cityId ? { field: { venue: { cityId: input.cityId } } } : {}),
         startAt: {
           gte: input?.dateFrom ?? new Date(),
           ...(input?.dateTo ? { lte: input.dateTo } : {}),
@@ -104,6 +124,8 @@ export const eventsRouter = router({
           endAt: e.endAt,
           numberOfTeams: e.numberOfTeams,
           playersPerTeam: e.playersPerTeam,
+          priceMinor: e.priceMinor,
+          level: e.level,
           venueId: e.field.venue.id,
           venue: e.field.venue.name,
           city: e.field.venue.city.name,

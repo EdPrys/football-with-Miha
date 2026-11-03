@@ -83,3 +83,12 @@ is future work. Do not use the former foundation-only roadmap as implementation 
 
 Update these docs with behavior/config changes. Prisma seed imports the verified
 catalogue only; never document default admin credentials that do not exist.
+
+## Acquisition flow (2026-11-03)
+
+Game details: optional UAH kopecks `priceMinor` (null unknown, 0 free), GameLevel,
+and public newcomerInfo. Never infer missing prices or game level. City-specific
+new-game subscriptions are explicit opt-in and in-app only; createEvent writes
+the game and subscriber notifications in one transaction. Repeat templates are
+organizer-owned queries; create a separate game after review, without copying
+participants/invitations/results. Auth `next` paths must stay internal.

@@ -80,18 +80,18 @@ API — tRPC 11 поверх Fastify, вхідні дані перевіряє Z
 Точні типи результатів експортуються як `AppRouterOutputs` із `@app/api`;
 панель показує фактичну відповідь після виклику, не є повною OpenAPI-схемою відповідей.
 
-| Router          | Queries                             | Mutations                                                                        | Доступ                                                                     |
-| --------------- | ----------------------------------- | -------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| `auth`          | `me`                                | `register`, `login`                                                              | register/login Public; me Auth                                             |
-| `cities`        | `list`                              | —                                                                                | Public                                                                     |
-| `venues`        | `list`, `get`                       | `create`, `addField`, `update`, `updateField`                                    | Читання Public; створення Manager; редагування Admin                       |
-| `events`        | `list`, `get`, `mine`               | `create`, `join`, `leave`, `start`, `finish`, `cancel`, `delete`, `balanceTeams` | list/get Public; mine/join/leave Auth; create Manager; керування Organizer |
-| `players`       | `profile`, `matchHistory`, `inCity` | `updateMySkills`                                                                 | profile/history Public; inCity Manager; skills Auth                        |
-| `users`         | `findByEmail`, `list`               | `updateAvatar`, `updateCity`, `requestOrganizer`, `setRole`                      | list/setRole Admin; решта Auth                                             |
-| `invitations`   | `candidates`, `received`            | `send`, `sendMany`, `respond`                                                    | Auth + перевірки учасників/стану в domain                                  |
-| `ratings`       | `rateableTargets`                   | `submit`                                                                         | Auth, оцінювати можуть співучасники завершеної гри                         |
-| `mvp`           | `status`                            | `vote`                                                                           | status Public; vote Auth + правила участі                                  |
-| `notifications` | `mine`                              | `markRead`, `markAllRead`                                                        | Auth, тільки власні сповіщення                                             |
+| Router          | Queries                                 | Mutations                                                                        | Доступ                                                                                                         |
+| --------------- | --------------------------------------- | -------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `auth`          | `me`                                    | `register`, `login`                                                              | register/login Public; me Auth                                                                                 |
+| `cities`        | `list`                                  | —                                                                                | Public                                                                                                         |
+| `venues`        | `list`, `get`                           | `create`, `addField`, `update`, `updateField`                                    | Читання Public; створення Manager; редагування Admin                                                           |
+| `events`        | `list`, `get`, `mine`, `repeatTemplate` | `create`, `join`, `leave`, `start`, `finish`, `cancel`, `delete`, `balanceTeams` | list/get Public; mine/join/leave Auth; create Manager; repeatTemplate Manager + Organizer; керування Organizer |
+| `players`       | `profile`, `matchHistory`, `inCity`     | `updateMySkills`                                                                 | profile/history Public; inCity Manager; skills Auth                                                            |
+| `users`         | `findByEmail`, `list`                   | `updateAvatar`, `updateCity`, `requestOrganizer`, `setRole`                      | list/setRole Admin; решта Auth                                                                                 |
+| `invitations`   | `candidates`, `received`                | `send`, `sendMany`, `respond`                                                    | Auth + перевірки учасників/стану в domain                                                                      |
+| `ratings`       | `rateableTargets`                       | `submit`                                                                         | Auth, оцінювати можуть співучасники завершеної гри                                                             |
+| `mvp`           | `status`                                | `vote`                                                                           | status Public; vote Auth + правила участі                                                                      |
+| `notifications` | `mine`, `gameSubscriptions`             | `markRead`, `markAllRead`, `subscribeCity`                                       | Auth, тільки власні сповіщення та підписки                                                                     |
 
 Основні відповіді: auth повертає `{ token, user }`; events.create — `{ id, invited }`;
 events.join — `{ participantId, status, position }`; ratings.submit — `{ saved }`.
@@ -150,3 +150,26 @@ URL-encoded `input`, для `mutation` — POST. Браузерні клієнт
 Пакет панелі: [trpc-ui](https://github.com/aidansunbury/trpc-ui).
 Панель використовує вбудовану клієнтську збірку; Monaco JSON editor може
 завантажувати ресурси з CDN, тому для повної роботи редактора може бути потрібен інтернет.
+
+## Пошук, умови гри, повторення й підписки (2026-11-03)
+
+- `events.list` приймає необов'язковий `cityId` разом з іншими фільтрами.
+- `events.create`: `priceMinor?: number | null` — ціна з гравця в копійках UAH,
+  ціле 0–100000000; null/відсутнє — невідомо, 0 — безкоштовно. `level`:
+  BEGINNER, CASUAL, COMPETITIVE, ALL_LEVELS або null. `newcomerInfo`: текст до
+  2000 символів або null; публічні інструкції від організатора. Оплат через API немає.
+- `events.repeatTemplate({ eventId })`: Manager + перевірка organizerId. Повертає
+  лише поле, комплекс/місто, дати, формат і умови. Це query, нову гру не створює.
+  Web пропонує наступний майбутній тиждень за локальним часом браузера,
+  після перевірки форма викликає звичайний create. Учасники/запрошення/результати
+  джерела не копіюються; нові запрошення можна обрати явно.
+- `notifications.gameSubscriptions()`: лише власні підписки з назвами міст.
+- `notifications.subscribeCity({ cityId, subscribed })`: opt-in/відписка поточного
+  користувача; повторний opt-in не створює дубль. Підписка постійна, на всі дати
+  міста, не успадковує тимчасовий фільтр дат. Відписка не видаляє старі сповіщення.
+- Створення гри та EVENT_CREATED для підписників міста виконуються однією
+  транзакцією. Сам організатор не отримує сповіщення на власну гру.
+  Payload: eventId, eventStartAt (ISO), cityName, venueName. Це не запрошення,
+  не бронює місце й не записує користувача в гру. Зовнішньої доставки немає.
+- `/login?next=<internal-path>` повертає після входу/реєстрації на локальний шлях;
+  зовнішні, некоректні URL і циклічний `/login` відхиляються на користь `/profile`.

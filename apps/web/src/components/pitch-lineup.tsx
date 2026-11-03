@@ -58,6 +58,7 @@ export function PitchLineup({
   meId,
   canJoinBase,
   isLoggedIn,
+  loginHref,
   joinPending,
   onJoin,
 }: {
@@ -67,6 +68,7 @@ export function PitchLineup({
   meId?: string;
   canJoinBase: boolean;
   isLoggedIn: boolean;
+  loginHref: string;
   joinPending: boolean;
   onJoin: (position: JoinPosition, teamId: string) => void;
 }) {
@@ -131,7 +133,7 @@ export function PitchLineup({
           </button>
         ) : (
           <Link
-            href="/login"
+            href={loginHref}
             className="flex size-11 items-center justify-center rounded-full border-2 border-dashed border-white/60 text-white/80 hover:bg-white/10"
             aria-label={`${team.name}: ${label}`}
           >

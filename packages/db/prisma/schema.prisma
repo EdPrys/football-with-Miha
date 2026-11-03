@@ -61,6 +61,7 @@ enum NotificationType {
   EVENT_APPROACHING
   RATING_AVAILABLE
   MVP_AWARDED
+  EVENT_CREATED
 }
 
 enum RoleRequestStatus {
@@ -71,34 +72,35 @@ enum RoleRequestStatus {
 
 // ---------- Users & profile ----------
 model User {
-  id           String   @id @default(cuid())
-  name         String
-  email        String   @unique
-  passwordHash String
-  role         Role     @default(PLAYER)
-  avatarUrl    String?
+  id             String   @id @default(cuid())
+  name           String
+  email          String   @unique
+  passwordHash   String
+  role           Role     @default(PLAYER)
+  avatarUrl      String?
   // Home city ("базування"); organizers invite players from the game's city.
-  cityId       String   @default("kyiv")
-  city         City     @relation(fields: [cityId], references: [id])
+  cityId         String   @default("kyiv")
+  city           City     @relation(fields: [cityId], references: [id])
   // Where the signup came from (utm_* or ad click ids), for measuring ads.
   signupSource   String?
   signupMedium   String?
   signupCampaign String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
-  profile          PlayerProfile?
-  organizedEvents  Event[]           @relation("EventOrganizer")
-  participations   EventParticipant[]
-  invitationsSent     Invitation[]   @relation("InvitationInviter")
-  invitationsReceived Invitation[]   @relation("InvitationInvited")
-  ratingsGiven     Rating[]          @relation("RatingRater")
-  ratingsReceived  Rating[]          @relation("RatingRatee")
-  notifications    Notification[]
-  roleRequests     RoleRequest[]
-  mvpVotesGiven    MvpVote[]         @relation("MvpVoter")
-  mvpVotesReceived MvpVote[]         @relation("MvpNominee")
-  mvpAwards        EventMvp[]
+  profile             PlayerProfile?
+  organizedEvents     Event[]                @relation("EventOrganizer")
+  participations      EventParticipant[]
+  invitationsSent     Invitation[]           @relation("InvitationInviter")
+  invitationsReceived Invitation[]           @relation("InvitationInvited")
+  ratingsGiven        Rating[]               @relation("RatingRater")
+  ratingsReceived     Rating[]               @relation("RatingRatee")
+  notifications       Notification[]
+  roleRequests        RoleRequest[]
+  mvpVotesGiven       MvpVote[]              @relation("MvpVoter")
+  mvpVotesReceived    MvpVote[]              @relation("MvpNominee")
+  gameSubscriptions   CityGameSubscription[]
+  mvpAwards           EventMvp[]
 
   @@index([cityId])
 }
@@ -118,13 +120,13 @@ model PlayerProfile {
 
 // One row per (profile, skill). value + ratingsCount are derived, never user-set.
 model PlayerSkill {
-  id            String        @id @default(cuid())
-  profileId     String
-  profile       PlayerProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
-  skill         SkillType
-  value         Float         @default(0)
-  ratingsCount  Int           @default(0)
-  updatedAt     DateTime      @updatedAt
+  id           String        @id @default(cuid())
+  profileId    String
+  profile      PlayerProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  skill        SkillType
+  value        Float         @default(0)
+  ratingsCount Int           @default(0)
+  updatedAt    DateTime      @updatedAt
 
   @@unique([profileId, skill])
 }
@@ -138,8 +140,9 @@ model City {
   name   String @unique
   region String
 
-  users  User[]
-  venues Venue[]
+  users             User[]
+  venues            Venue[]
+  gameSubscriptions CityGameSubscription[]
 }
 
 // ---------- Venues & fields ----------
@@ -159,11 +162,11 @@ enum FieldSurface {
 }
 
 model Venue {
-  id        String   @id @default(cuid())
-  name      String
-  cityId    String
-  city      City     @relation(fields: [cityId], references: [id])
-  createdAt DateTime @default(now())
+  id               String    @id @default(cuid())
+  name             String
+  cityId           String
+  city             City      @relation(fields: [cityId], references: [id])
+  createdAt        DateTime  @default(now())
   address          String?
   latitude         Float?
   longitude        Float?
@@ -184,12 +187,12 @@ model Venue {
 }
 
 model Field {
-  id       String  @id @default(cuid())
-  venueId  String
-  venue    Venue   @relation(fields: [venueId], references: [id], onDelete: Cascade)
-  name     String
-  capacity Int?    // supported player count; null means not established
-  isActive Boolean @default(true)
+  id           String            @id @default(cuid())
+  venueId      String
+  venue        Venue             @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  name         String
+  capacity     Int? // supported player count; null means not established
+  isActive     Boolean           @default(true)
   environment  FieldEnvironment?
   surface      FieldSurface?
   hasLighting  Boolean?
@@ -200,28 +203,50 @@ model Field {
 }
 
 // ---------- Events ----------
+enum GameLevel {
+  BEGINNER
+  CASUAL
+  COMPETITIVE
+  ALL_LEVELS
+}
+
+model CityGameSubscription {
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cityId    String
+  city      City     @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@id([userId, cityId])
+  @@index([cityId])
+}
+
 model Event {
-  id             String      @id @default(cuid())
-  organizerId    String
-  organizer      User        @relation("EventOrganizer", fields: [organizerId], references: [id])
-  fieldId        String
-  field          Field       @relation(fields: [fieldId], references: [id])
-  startAt        DateTime
-  endAt          DateTime
-  numberOfTeams  Int
-  playersPerTeam Int
+  id                String      @id @default(cuid())
+  organizerId       String
+  organizer         User        @relation("EventOrganizer", fields: [organizerId], references: [id])
+  fieldId           String
+  field             Field       @relation(fields: [fieldId], references: [id])
+  startAt           DateTime
+  endAt             DateTime
+  numberOfTeams     Int
+  playersPerTeam    Int
+  // Price per player in kopecks (UAH); null = unspecified, zero = free.
+  priceMinor        Int?
+  level             GameLevel?
+  newcomerInfo      String?
   // capacity is derived: numberOfTeams * playersPerTeam (never stored)
   // "DEF-MID-FWD" key from formationOptionsFor(playersPerTeam); GK is always 1 and implicit.
-  formation      String?
-  status         EventStatus @default(UPCOMING)
+  formation         String?
+  status            EventStatus @default(UPCOMING)
   // Set when the organizer finishes the game; star ratings close 24h later.
-  finishedAt     DateTime?
+  finishedAt        DateTime?
   // Set once MVP voting is closed and winners are written to EventMvp.
-  mvpResolvedAt  DateTime?
+  mvpResolvedAt     DateTime?
   // The channel post announcing the game, removed when the game is deleted.
   telegramMessageId Int?
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
 
   teams        Team[]
   participants EventParticipant[]

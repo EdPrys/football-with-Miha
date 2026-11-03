@@ -8,6 +8,8 @@ import { toast } from 'sonner';
 import { trpc } from '@/lib/trpc';
 import { errorMessage } from '@/lib/errors';
 import { track } from '@/lib/analytics';
+import { ShareGame } from '@/components/share-game';
+import { loginFor, participationPrice, GAME_LEVEL_LABEL } from '@/lib/game-flow';
 import { Card } from '@/components/ui/card';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -140,6 +142,32 @@ export default function EventPage() {
           <p className="text-xs text-muted-foreground">Організатор: {e.organizer.name}</p>
         </Card>
 
+        <Card className="order-2 space-y-3 p-5">
+          <h2 className="text-sm font-semibold">Перед грою</h2>
+          <p className="text-sm font-medium">{participationPrice(e.priceMinor)}</p>
+          <p className="text-sm text-muted-foreground">
+            Рівень: {e.level ? GAME_LEVEL_LABEL[e.level] : 'уточнюється'}
+          </p>
+          <p className="whitespace-pre-wrap break-words text-sm text-muted-foreground">
+            {e.newcomerInfo ||
+              'Організатор ще не додав інструкцій. Уточни місце зустрічі, взуття та умови участі перед грою.'}
+          </p>
+          {e.priceMinor != null && e.priceMinor > 0 && (
+            <p className="text-xs text-muted-foreground">
+              Умови оплати узгоджуються з організатором. Оплати через Kopanka немає.
+            </p>
+          )}
+        </Card>
+        <ShareGame eventId={e.id} venue={e.field.venue.name} />
+        {isOrganizer && (
+          <Link
+            href={`/events/new?repeat=${encodeURIComponent(e.id)}`}
+            className={cn(buttonVariants({ variant: 'outline' }), 'order-6 w-full')}
+          >
+            Повторити наступного тижня
+          </Link>
+        )}
+
         {e.status === 'FINISHED' && <MvpCard eventId={e.id} className="order-2" />}
 
         {canRate && (
@@ -192,7 +220,10 @@ export default function EventPage() {
                 </Button>
               </div>
             ) : (
-              <Link href="/login?mode=register" className={cn(buttonVariants(), 'w-full')}>
+              <Link
+                href={loginFor(`/events/${e.id}`, true)}
+                className={cn(buttonVariants(), 'w-full')}
+              >
                 Зареєструватись і грати
               </Link>
             )}
@@ -288,6 +319,7 @@ export default function EventPage() {
           meId={userId}
           canJoinBase={canJoin}
           isLoggedIn={!!me.data}
+          loginHref={loginFor(`/events/${e.id}`, true)}
           joinPending={join.isPending}
           onJoin={(position, teamId) => join.mutate({ eventId: e.id, position, teamId })}
         />

@@ -1,6 +1,30 @@
 # Backlog and verification
 
-Updated 2026-11-02. Code existence and production verification are separate.
+Updated 2026-11-03. Code existence and production verification are separate.
+
+## Completed: acquisition and return flow (2026-11-03)
+
+Implemented the five improvements agreed on 2026-11-02:
+
+- [x] Login/register links on the game preserve a validated internal `next` path.
+- [x] Organizers enter optional price (UAH per player), playing level and newcomer
+      instructions while creating a game. Unknown values stay unknown; zero price means free.
+- [x] “Invite a friend” uses native sharing or copies a direct game link, with a
+      manual copy fallback when clipboard access is unavailable.
+- [x] Organizers can open a settings-only repeat template with the next future
+      weekly date in their browser timezone. They review it and explicitly create
+      a new game; participants, invitations and results are not copied.
+- [x] Empty discovery results offer an explicit city subscription. Notifications
+      are persistent, in-app only, for newly created games on all dates in that city.
+      Subscription management/unsubscribe is in Notifications. No email/push delivery.
+
+Migration: `20261103120000_game_discovery`. Deployment must apply it before
+running the new API (the API Docker CMD already runs migrate deploy).
+
+Broader marketing direction remains a one-city pilot with recurring organizers,
+real games and measurement of first participation and return. City, live game
+supply, budget, monetization and production analytics remain unconfirmed.
+Paid campaigns are not authorized by this work. See `MARKETING_PILOT.md`.
 
 ## Production checks
 

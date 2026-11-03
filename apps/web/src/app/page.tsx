@@ -1,7 +1,10 @@
 'use client';
 
+import { useSearchParams } from 'next/navigation';
+import { CitySelect } from '@/components/city-select';
+import { GameSubscription } from '@/components/game-subscription';
 import Link from 'next/link';
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { ArrowRight, CalendarDays, Plus, RotateCcw } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import { Button, buttonVariants } from '@/components/ui/button';
@@ -33,10 +36,19 @@ function dateRange(filter: DateFilter) {
 }
 
 export default function DiscoverPage() {
+  return (
+    <Suspense fallback={<Skeleton className="h-72 rounded-xl" />}>
+      <DiscoverGames />
+    </Suspense>
+  );
+}
+function DiscoverGames() {
+  const params = useSearchParams();
+  const [cityId, setCityId] = useState(params.get('city') ?? '');
   const [filter, setFilter] = useState<DateFilter>('all');
   // Stable query timestamps until the user switches filters; avoid a new query key on every render.
   const [range, setRange] = useState<ReturnType<typeof dateRange>>({});
-  const events = trpc.events.list.useQuery(range);
+  const events = trpc.events.list.useQuery({ ...range, ...(cityId ? { cityId } : {}) });
   const me = trpc.auth.me.useQuery(undefined, { retry: false });
   const guest = !me.isLoading && !me.data;
   const GamesHeading = guest ? 'h2' : 'h1';
@@ -71,6 +83,17 @@ export default function DiscoverPage() {
             <Plus className="size-4" />
             Створити гру
           </Link>
+        </div>
+        <div className="max-w-sm space-y-2">
+          <label className="text-sm font-medium" htmlFor="discover-city">
+            Місто {cityId ? '' : '· усі міста'}
+          </label>
+          <CitySelect id="discover-city" value={cityId} onChange={setCityId} />
+          {cityId && (
+            <button className="text-sm text-primary" onClick={() => setCityId('')}>
+              Показати всі міста
+            </button>
+          )}
         </div>
         <div className="flex flex-wrap gap-2" aria-label="Фільтр за датою">
           {FILTERS.map((f) => (
@@ -128,6 +151,13 @@ export default function DiscoverPage() {
                 ? 'Організуй матч і збери гравців на полі.'
                 : 'Переглянь інші дати або створи власний матч.'}
             </p>
+            {cityId ? (
+              <GameSubscription cityId={cityId} returnTo={`/?city=${encodeURIComponent(cityId)}`} />
+            ) : (
+              <p className="mt-4 text-sm text-muted-foreground">
+                Обери місто вище, щоб підписатися на нові ігри.
+              </p>
+            )}
             <div className="mt-5 flex flex-wrap justify-center gap-2">
               {filter !== 'all' && (
                 <Button variant="outline" className="h-11 px-4" onClick={() => chooseFilter('all')}>

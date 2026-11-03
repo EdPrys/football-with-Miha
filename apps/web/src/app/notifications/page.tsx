@@ -21,6 +21,7 @@ const ICON: Record<string, typeof Mail> = {
   EVENT_CANCELLED: XCircle,
   RATING_AVAILABLE: Star,
   MVP_AWARDED: Crown,
+  EVENT_CREATED: Bell,
 };
 
 export default function NotificationsPage() {
@@ -28,6 +29,16 @@ export default function NotificationsPage() {
   const me = trpc.auth.me.useQuery(undefined, { retry: false });
   const list = trpc.notifications.mine.useQuery(undefined, { enabled: !!me.data });
 
+  const subscriptions = trpc.notifications.gameSubscriptions.useQuery(undefined, {
+    enabled: !!me.data,
+  });
+  const unsubscribe = trpc.notifications.subscribeCity.useMutation({
+    onSuccess: () => {
+      utils.notifications.gameSubscriptions.invalidate();
+      toast('Підписку скасовано');
+    },
+    onError: (e) => toast.error(errorMessage(e)),
+  });
   const markAllRead = trpc.notifications.markAllRead.useMutation({
     onSuccess: () => utils.notifications.mine.invalidate(),
   });
@@ -49,7 +60,7 @@ export default function NotificationsPage() {
     return (
       <Card className="mx-auto max-w-md space-y-4 p-8 text-center">
         <p className="text-sm text-muted-foreground">Увійди, щоб бачити сповіщення.</p>
-        <Link href="/login" className={cn(buttonVariants(), 'w-full')}>
+        <Link href="/login?next=%2Fnotifications" className={cn(buttonVariants(), 'w-full')}>
           Увійти
         </Link>
       </Card>
@@ -60,6 +71,44 @@ export default function NotificationsPage() {
   return (
     <div className="mx-auto w-full max-w-xl space-y-4">
       <h1 className="text-2xl font-bold">Сповіщення</h1>
+      <Card className="space-y-3 p-4">
+        <h2 className="text-sm font-semibold">Підписки на нові ігри</h2>
+        <p className="text-xs text-muted-foreground">
+          Лише сповіщення всередині Kopanka, для всіх дат у вибраних містах.
+        </p>
+        {subscriptions.isLoading && (
+          <p role="status" className="text-sm">
+            Завантажуємо…
+          </p>
+        )}
+        {subscriptions.isError && (
+          <p className="text-sm text-destructive">
+            Не вдалося завантажити підписки.{' '}
+            <button className="underline" onClick={() => subscriptions.refetch()}>
+              Повторити
+            </button>
+          </p>
+        )}
+        {subscriptions.data?.map((subscription) => (
+          <div key={subscription.cityId} className="flex items-center justify-between gap-3">
+            <span className="text-sm">{subscription.city.name}</span>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={unsubscribe.isPending}
+              onClick={() => unsubscribe.mutate({ cityId: subscription.cityId, subscribed: false })}
+            >
+              Скасувати
+            </Button>
+          </div>
+        ))}
+        {subscriptions.data?.length === 0 && (
+          <p className="text-sm text-muted-foreground">Підписок поки немає.</p>
+        )}
+        <Link href="/" className="text-sm text-primary">
+          Обрати місто та переглянути ігри
+        </Link>
+      </Card>
       {list.isLoading && <Skeleton className="h-24 w-full rounded-xl" />}
       {list.data && notifications.length === 0 && (
         <Card className="flex flex-col items-center gap-2 p-8 text-center text-sm text-muted-foreground">
@@ -92,6 +141,11 @@ export default function NotificationsPage() {
                     <p className="text-sm">
                       <span className="font-medium">{str(p, 'invitedUserName') || 'Гравець'}</span>{' '}
                       прийняв(ла) твоє запрошення
+                    </p>
+                  )}
+                  {n.type === 'EVENT_CREATED' && (
+                    <p className="text-sm">
+                      Нова гра: {str(p, 'cityName')} · {str(p, 'venueName')}
                     </p>
                   )}
                   {n.type === 'EVENT_CANCELLED' && <p className="text-sm">Гру скасовано</p>}

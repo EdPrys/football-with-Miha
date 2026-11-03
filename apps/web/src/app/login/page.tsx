@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { trpc } from '@/lib/trpc';
 import { errorMessage } from '@/lib/errors';
+import { safeReturnTo } from '@/lib/game-flow';
 import { setToken } from '@/lib/auth';
 import { getAttribution, track } from '@/lib/analytics';
 import { Card } from '@/components/ui/card';
@@ -39,7 +40,7 @@ function LoginForm() {
     setToken(token);
     await utils.invalidate();
     toast.success('Ласкаво просимо!');
-    router.push('/profile');
+    router.replace(safeReturnTo(params.get('next')));
   };
   const login = trpc.auth.login.useMutation({
     onSuccess: (d) => {

@@ -1,3 +1,4 @@
+import { setCityGameSubscription } from '@app/domain';
 import { z } from 'zod';
 import { router, protectedProcedure } from '../trpc.js';
 
@@ -10,6 +11,28 @@ function invitationIdOf(payload: unknown): string | undefined {
 }
 
 export const notificationsRouter = router({
+  gameSubscriptions: protectedProcedure
+    .meta({
+      description:
+        'Bearer token required. List your city subscriptions for in-app notifications about newly created games.',
+    })
+    .query(({ ctx }) =>
+      ctx.prisma.cityGameSubscription.findMany({
+        where: { userId: ctx.user.id },
+        include: { city: { select: { name: true } } },
+        orderBy: { createdAt: 'asc' },
+      }),
+    ),
+  subscribeCity: protectedProcedure
+    .meta({
+      description:
+        'Bearer token required. Subscribe/unsubscribe yourself to new games in one city. In-app only, all future dates; no email or push.',
+    })
+    .input(z.object({ cityId: z.string().min(1), subscribed: z.boolean() }))
+    .mutation(({ ctx, input }) =>
+      setCityGameSubscription(ctx.prisma, ctx.user.id, input.cityId, input.subscribed),
+    ),
+
   mine: protectedProcedure
     .meta({ description: 'Bearer token required. Current user notifications and activity.' })
     .query(async ({ ctx }) => {

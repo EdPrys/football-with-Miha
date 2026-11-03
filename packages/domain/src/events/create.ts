@@ -1,4 +1,4 @@
-import type { Event, PrismaClient } from '@app/db';
+import type { Event, GameLevel, PrismaClient } from '@app/db';
 import { DomainError } from '../errors.js';
 import { teamNames } from './team-names.js';
 
@@ -9,6 +9,9 @@ export interface CreateEventInput {
   endAt: Date;
   numberOfTeams: number;
   playersPerTeam: number;
+  priceMinor?: number | null;
+  level?: GameLevel | null;
+  newcomerInfo?: string | null;
 }
 
 export const MIN_TEAMS = 2;
@@ -37,19 +40,58 @@ export async function createEvent(prisma: PrismaClient, input: CreateEventInput)
     throw new DomainError('VALIDATION', 'startAt must be in the future');
   }
 
-  const field = await prisma.field.findUnique({ where: { id: input.fieldId } });
-  if (!field) throw new DomainError('NOT_FOUND', 'Field not found');
-  if (!field.isActive) throw new DomainError('INVALID_STATE', 'Field is not active');
+  if (
+    input.priceMinor != null &&
+    (!Number.isSafeInteger(input.priceMinor) ||
+      input.priceMinor < 0 ||
+      input.priceMinor > 100_000_000)
+  ) {
+    throw new DomainError('VALIDATION', 'Invalid participation price');
+  }
+  if (input.newcomerInfo && input.newcomerInfo.length > 2000) {
+    throw new DomainError('VALIDATION', 'Newcomer instructions are too long');
+  }
 
-  return prisma.event.create({
-    data: {
-      organizerId: input.organizerId,
-      fieldId: input.fieldId,
-      startAt: input.startAt,
-      endAt: input.endAt,
-      numberOfTeams: input.numberOfTeams,
-      playersPerTeam: input.playersPerTeam,
-      teams: { create: teamNames(input.numberOfTeams).map((name) => ({ name })) },
-    },
+  // Persist the game and subscriber notifications together: a rollback never
+  // leaves a notification pointing to a game that was not created.
+  return prisma.$transaction(async (tx) => {
+    const field = await tx.field.findUnique({
+      where: { id: input.fieldId },
+      include: { venue: { include: { city: true } } },
+    });
+    if (!field) throw new DomainError('NOT_FOUND', 'Field not found');
+    if (!field.isActive) throw new DomainError('INVALID_STATE', 'Field is not active');
+    const event = await tx.event.create({
+      data: {
+        organizerId: input.organizerId,
+        fieldId: input.fieldId,
+        startAt: input.startAt,
+        endAt: input.endAt,
+        numberOfTeams: input.numberOfTeams,
+        playersPerTeam: input.playersPerTeam,
+        priceMinor: input.priceMinor ?? null,
+        level: input.level ?? null,
+        newcomerInfo: input.newcomerInfo?.trim() || null,
+        teams: { create: teamNames(input.numberOfTeams).map((name) => ({ name })) },
+      },
+    });
+    const subscriptions = await tx.cityGameSubscription.findMany({
+      where: { cityId: field.venue.cityId, userId: { not: input.organizerId } },
+      select: { userId: true },
+    });
+    if (subscriptions.length)
+      await tx.notification.createMany({
+        data: subscriptions.map(({ userId }) => ({
+          userId,
+          type: 'EVENT_CREATED' as const,
+          payload: {
+            eventId: event.id,
+            eventStartAt: event.startAt.toISOString(),
+            cityName: field.venue.city.name,
+            venueName: field.venue.name,
+          },
+        })),
+      });
+    return event;
   });
 }

@@ -1,3 +1,4 @@
+import { participationPrice, GAME_LEVEL_LABEL } from '@/lib/game-flow';
 import Link from 'next/link';
 import { ArrowUpRight, MapPin, Users } from 'lucide-react';
 import { formatDate, formatTime } from '@/lib/format';
@@ -15,6 +16,8 @@ export type DiscoverEvent = {
   capacity: number;
   availableSlots: number;
   canAddTeam: boolean;
+  priceMinor?: number | null;
+  level?: string | null;
 };
 
 function dayLabel(date: Date) {
@@ -61,6 +64,10 @@ export function EventCard({ event: e }: { event: DiscoverEvent }) {
         </p>
       </div>
       <div>
+        <p className="mb-2 text-sm font-medium">{participationPrice(e.priceMinor)}</p>
+        {e.level && (
+          <p className="mb-3 text-xs text-muted-foreground">{GAME_LEVEL_LABEL[e.level]}</p>
+        )}
         <div className="mb-2 flex items-center justify-between gap-2 text-xs">
           <span className="flex items-center gap-1.5 text-muted-foreground">
             <Users className="size-3.5" />
