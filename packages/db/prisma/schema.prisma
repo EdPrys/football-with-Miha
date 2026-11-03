@@ -62,6 +62,7 @@ enum NotificationType {
   RATING_AVAILABLE
   MVP_AWARDED
   EVENT_CREATED
+  SLOT_AVAILABLE
 }
 
 enum RoleRequestStatus {
@@ -99,6 +100,7 @@ model User {
   roleRequests        RoleRequest[]
   mvpVotesGiven       MvpVote[]              @relation("MvpVoter")
   mvpVotesReceived    MvpVote[]              @relation("MvpNominee")
+  waitlistEntries     EventWaitlist[]
   gameSubscriptions   CityGameSubscription[]
   mvpAwards           EventMvp[]
 
@@ -235,6 +237,8 @@ model Event {
   priceMinor        Int?
   level             GameLevel?
   newcomerInfo      String?
+  organizerPhone    String?
+  organizerTelegram String?
   // capacity is derived: numberOfTeams * playersPerTeam (never stored)
   // "DEF-MID-FWD" key from formationOptionsFor(playersPerTeam); GK is always 1 and implicit.
   formation         String?
@@ -249,6 +253,7 @@ model Event {
   updatedAt         DateTime    @updatedAt
 
   teams        Team[]
+  waitlist     EventWaitlist[]
   participants EventParticipant[]
   invitations  Invitation[]
   ratings      Rating[]
@@ -281,9 +286,12 @@ model EventParticipant {
   teamId            String?
   team              Team?             @relation(fields: [teamId], references: [id], onDelete: SetNull)
   joinedAt          DateTime          @default(now())
+  remindBeforeGame  Boolean           @default(false)
+  reminderSentAt    DateTime?
 
   @@unique([eventId, userId]) // can't join the same event twice
   @@index([userId])
+  @@index([remindBeforeGame, reminderSentAt])
 }
 
 model Invitation {
@@ -375,6 +383,18 @@ model EventMvp {
   userId  String
   user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   votes   Int
+
+  @@id([eventId, userId])
+  @@index([userId])
+}
+
+// A notification request, not a reserved place or automatic participation.
+model EventWaitlist {
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
 
   @@id([eventId, userId])
   @@index([userId])

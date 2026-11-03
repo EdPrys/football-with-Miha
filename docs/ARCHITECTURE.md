@@ -82,3 +82,13 @@ S3-сумісне сховище аватарів (інакше inline); GA4/Met
 
 Конфігурація й мережа: [DEPLOYMENT.md](DEPLOYMENT.md).
 Бізнес-правила: [PRODUCT_PLAN.md](PRODUCT_PLAN.md), [SKILLS.md](SKILLS.md).
+
+## Зручність гравців
+
+`EventWaitlist` — унікальний зв'язок eventId/userId для явного opt-in слот-сповіщень,
+не резерв місця. Участь зберігає приватні remindBeforeGame/reminderSentAt.
+Join/leave/waitlist/reminder transactions беруть row lock Event в одному порядку;
+`sendGameReminders` — частина наявного п'ятихвилинного scheduler.
+Контакти організатора зберігаються на Event за його явним вибором, не на User.
+Календар експортується локально як `.ics`; browser drafts та фільтри використовують
+localStorage із безпечним fallback. Звіт: [PLAYER_COMFORT.md](PLAYER_COMFORT.md).

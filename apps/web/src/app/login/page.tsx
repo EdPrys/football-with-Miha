@@ -120,6 +120,12 @@ function LoginForm() {
               {mismatch && <p className="text-xs text-destructive">Паролі не збігаються</p>}
             </div>
           )}
+          {(mode === 'login' ? login.error : register.error) && (
+            <p role="alert" className="text-sm text-destructive">
+              {errorMessage(mode === 'login' ? login.error : register.error)} Дані залишилися у
+              формі — спробуй ще раз.
+            </p>
+          )}
           <Button type="submit" className="w-full" disabled={pending}>
             {pending ? '...' : mode === 'login' ? 'Увійти' : 'Створити акаунт'}
           </Button>

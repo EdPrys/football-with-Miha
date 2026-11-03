@@ -20,7 +20,10 @@ const participant = {
 };
 
 function createPrismaMock() {
-  return {
+  const db = {
+    $queryRaw: vi.fn(),
+    eventWaitlist: { findMany: vi.fn().mockResolvedValue([]) },
+    notification: { createMany: vi.fn() },
     event: {
       findUnique: vi.fn(),
     },
@@ -29,6 +32,7 @@ function createPrismaMock() {
       update: vi.fn(),
     },
   };
+  return { ...db, $transaction: vi.fn((fn: (tx: typeof db) => unknown) => fn(db)) };
 }
 
 describe('leaveEvent', () => {
@@ -63,7 +67,7 @@ describe('leaveEvent', () => {
 
     expect(prisma.eventParticipant.update).toHaveBeenCalledWith({
       where: { id: PARTICIPANT_ID },
-      data: { status: 'CANCELLED', teamId: null },
+      data: { status: 'CANCELLED', teamId: null, remindBeforeGame: false },
     });
   });
 
@@ -132,7 +136,7 @@ describe('leaveEvent', () => {
 
     expect(prisma.eventParticipant.update).toHaveBeenCalledWith({
       where: { id: PARTICIPANT_ID },
-      data: { status: 'CANCELLED', teamId: null },
+      data: { status: 'CANCELLED', teamId: null, remindBeforeGame: false },
     });
   });
 

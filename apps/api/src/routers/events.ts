@@ -1,6 +1,9 @@
 import { z } from 'zod';
 import {
   createEvent,
+  updateOrganizerContacts,
+  setEventWaitlist,
+  setGameReminder,
   repeatEventTemplate,
   eventCapacity,
   invitePlayers,
@@ -28,6 +31,65 @@ import { eventAnnouncementText } from '../integrations/event-announcement.js';
 const ACTIVE_STATUSES: ParticipantStatus[] = [ParticipantStatus.JOINED, ParticipantStatus.ATTENDED];
 
 export const eventsRouter = router({
+  myState: protectedProcedure
+    .meta({
+      description:
+        'Bearer token required. Your private reminder preference, participation and waitlist state for one game.',
+    })
+    .input(z.object({ eventId: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      const [participant, waiting] = await Promise.all([
+        ctx.prisma.eventParticipant.findUnique({
+          where: { eventId_userId: { eventId: input.eventId, userId: ctx.user.id } },
+          select: { status: true, remindBeforeGame: true, reminderSentAt: true },
+        }),
+        ctx.prisma.eventWaitlist.findUnique({
+          where: { eventId_userId: { eventId: input.eventId, userId: ctx.user.id } },
+          select: { createdAt: true },
+        }),
+      ]);
+      return { participant, waiting: !!waiting };
+    }),
+  setWaitlist: protectedProcedure
+    .meta({
+      description:
+        'Bearer token required. Opt in/out of in-app slot alerts for a full future game. No reservation or auto-join; all waiting players are notified.',
+    })
+    .input(z.object({ eventId: z.string().min(1), waiting: z.boolean() }))
+    .mutation(({ ctx, input }) =>
+      setEventWaitlist(ctx.prisma, input.eventId, ctx.user.id, input.waiting),
+    ),
+  setReminder: protectedProcedure
+    .meta({
+      description:
+        'Bearer token required. A joined player opts in/out of one in-app reminder within the hour before kickoff; no push/email.',
+    })
+    .input(z.object({ eventId: z.string().min(1), enabled: z.boolean() }))
+    .mutation(({ ctx, input }) =>
+      setGameReminder(ctx.prisma, input.eventId, ctx.user.id, input.enabled),
+    ),
+  updateContacts: protectedProcedure
+    .meta({
+      description:
+        'Organizer only. Set or clear the public contact phone and Telegram username for a game.',
+    })
+    .input(
+      z.object({
+        eventId: z.string().min(1),
+        organizerPhone: z.string().max(30).nullish(),
+        organizerTelegram: z.string().max(33).nullish(),
+      }),
+    )
+    .mutation(({ ctx, input }) =>
+      updateOrganizerContacts(
+        ctx.prisma,
+        input.eventId,
+        ctx.user.id,
+        input.organizerPhone,
+        input.organizerTelegram,
+      ),
+    ),
+
   repeatTemplate: managerProcedure
     .meta({
       description:
@@ -57,6 +119,8 @@ export const eventsRouter = router({
           .describe('Price per player in UAH kopecks; null = unspecified, 0 = free.'),
         level: z.nativeEnum(GameLevel).nullish(),
         newcomerInfo: z.string().trim().max(2000).nullish(),
+        organizerPhone: z.string().trim().max(30).nullish(),
+        organizerTelegram: z.string().trim().max(33).nullish(),
         // Players to invite right away (picked from the game's city).
         invitedUserIds: z.array(z.string().min(1)).max(200).default([]),
       }),
@@ -206,7 +270,13 @@ export const eventsRouter = router({
       return {
         ...event,
         participants: event.participants.map((p) => ({
-          ...p,
+          id: p.id,
+          eventId: p.eventId,
+          userId: p.userId,
+          status: p.status,
+          preferredPosition: p.preferredPosition,
+          teamId: p.teamId,
+          joinedAt: p.joinedAt,
           user: { ...p.user, stars: stars.get(p.userId)!, mvpCount: mvps.get(p.userId) ?? 0 },
         })),
         ratingClosesAt: ratingClosesAt(event.finishedAt),

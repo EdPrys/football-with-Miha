@@ -92,3 +92,14 @@ new-game subscriptions are explicit opt-in and in-app only; createEvent writes
 the game and subscriber notifications in one transaction. Repeat templates are
 organizer-owned queries; create a separate game after review, without copying
 participants/invitations/results. Auth `next` paths must stay internal.
+
+## Player comfort (2026-11-03)
+
+Event contacts are public and explicitly supplied by the organizer. Slot alerts
+require opt-in; waitlisting is not a reservation or auto-join. Join, leave,
+waitlist and reminder operations lock Event before participant changes. Reminders
+are off by default and in-app only; preserve sent markers on off/on and never
+expose private reminder flags in public event participants. `.ics` export is a
+snapshot without automatic calendar updates. Browser drafts are account/source
+scoped, never persist passwords. See docs/PLAYER_COMFORT.md and USABILITY_TEST.md;
+real-user/visual testing has not been completed.

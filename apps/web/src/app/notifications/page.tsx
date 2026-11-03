@@ -22,6 +22,8 @@ const ICON: Record<string, typeof Mail> = {
   RATING_AVAILABLE: Star,
   MVP_AWARDED: Crown,
   EVENT_CREATED: Bell,
+  SLOT_AVAILABLE: Bell,
+  EVENT_APPROACHING: Bell,
 };
 
 export default function NotificationsPage() {
@@ -109,6 +111,14 @@ export default function NotificationsPage() {
           Обрати місто та переглянути ігри
         </Link>
       </Card>
+      {list.isError && (
+        <Card className="space-y-3 p-4" role="alert">
+          <p className="text-sm">Не вдалося завантажити сповіщення.</p>
+          <Button variant="outline" onClick={() => list.refetch()}>
+            Спробувати ще
+          </Button>
+        </Card>
+      )}
       {list.isLoading && <Skeleton className="h-24 w-full rounded-xl" />}
       {list.data && notifications.length === 0 && (
         <Card className="flex flex-col items-center gap-2 p-8 text-center text-sm text-muted-foreground">
@@ -146,6 +156,16 @@ export default function NotificationsPage() {
                   {n.type === 'EVENT_CREATED' && (
                     <p className="text-sm">
                       Нова гра: {str(p, 'cityName')} · {str(p, 'venueName')}
+                    </p>
+                  )}
+                  {n.type === 'SLOT_AVAILABLE' && (
+                    <p className="text-sm">
+                      З’явилося вільне місце! Відкрий гру й обери позицію. Місце ще не заброньовано.
+                    </p>
+                  )}
+                  {n.type === 'EVENT_APPROACHING' && (
+                    <p className="text-sm">
+                      Гра почнеться протягом години. Перевір адресу й підготуйся до виходу.
                     </p>
                   )}
                   {n.type === 'EVENT_CANCELLED' && <p className="text-sm">Гру скасовано</p>}

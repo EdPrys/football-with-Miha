@@ -1,0 +1,104 @@
+{
+  "generatedAt": "2026-11-03T10:25:27.765Z",
+  "status": "passed",
+  "scope": "Real tRPC HTTP batching/SuperJSON/JWT/Argon2/PostgreSQL; synthetic accounts, no browser UI automation",
+  "actors": 14,
+  "httpRequests": 154,
+  "expectedErrors": 35,
+  "gamesCreated": 6,
+  "milliseconds": 3265,
+  "externalIntegrations": "disabled",
+  "fixturesKept": false,
+  "steps": [
+    {
+      "name": "Register 12 players, organizer and admin with real password hashing; login and JWT",
+      "status": "passed",
+      "milliseconds": 795
+    },
+    {
+      "name": "Reject wrong credentials, duplicate email, invalid/expired token and role escalation",
+      "status": "passed",
+      "milliseconds": 76
+    },
+    {
+      "name": "Set city, avatar and six self-assessed skills; validate profile",
+      "status": "passed",
+      "milliseconds": 117
+    },
+    {
+      "name": "Create venue/field via organizer API and city subscriptions with explicit opt-in",
+      "status": "passed",
+      "milliseconds": 111
+    },
+    {
+      "name": "Create a priced game with contacts and invitations; verify discovery and city alerts",
+      "status": "passed",
+      "milliseconds": 217
+    },
+    {
+      "name": "Accept/decline invitations without auto-joining and notify organizer",
+      "status": "passed",
+      "milliseconds": 122
+    },
+    {
+      "name": "Fill 2 teams; reject duplicate participation, second keeper and full-game join",
+      "status": "passed",
+      "milliseconds": 228
+    },
+    {
+      "name": "Waitlist opt-in, vacancy alerts and concurrent race for the last place",
+      "status": "passed",
+      "milliseconds": 213
+    },
+    {
+      "name": "Grow full game through Team C/Team D and enforce the 4-team limit",
+      "status": "passed",
+      "milliseconds": 189
+    },
+    {
+      "name": "Opt-in reminders; concurrent schedulers, deduplication and private preference visibility",
+      "status": "passed",
+      "milliseconds": 96
+    },
+    {
+      "name": "Balance teams and reject leaving within an hour of kickoff",
+      "status": "passed",
+      "milliseconds": 75
+    },
+    {
+      "name": "Repeat from an owned settings-only template without copying people or results",
+      "status": "passed",
+      "milliseconds": 54
+    },
+    {
+      "name": "Organizer lifecycle and rating-available notifications",
+      "status": "passed",
+      "milliseconds": 125
+    },
+    {
+      "name": "Peer ratings, self/outsider/duplicate guards, atomic batches and zero-star skip",
+      "status": "passed",
+      "milliseconds": 133
+    },
+    {
+      "name": "MVP voting, concurrent resolution, winner award and updated profile/history",
+      "status": "passed",
+      "milliseconds": 229
+    },
+    {
+      "name": "Expired rating window and notification read markers",
+      "status": "passed",
+      "milliseconds": 46
+    },
+    {
+      "name": "Cancellation, empty-game deletion, cascade cleanup and city unsubscribe",
+      "status": "passed",
+      "milliseconds": 230
+    },
+    {
+      "name": "Overdue-game scheduler finishes populated games, cancels empty games and resolves expired MVP",
+      "status": "passed",
+      "milliseconds": 113
+    }
+  ]
+}

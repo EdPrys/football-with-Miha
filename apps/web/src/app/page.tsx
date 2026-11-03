@@ -1,6 +1,7 @@
 'use client';
 
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useSavedText, writeSaved, searchPreferences } from '@/lib/saved-state';
 import { CitySelect } from '@/components/city-select';
 import { GameSubscription } from '@/components/game-subscription';
 import Link from 'next/link';
@@ -20,6 +21,19 @@ const FILTERS: { value: DateFilter; label: string }[] = [
   { value: 'tomorrow', label: 'Завтра' },
   { value: 'weekend', label: 'Вихідні' },
 ];
+
+function validDateFilter(value: string | null): DateFilter {
+  switch (value) {
+    case 'today':
+      return 'today';
+    case 'tomorrow':
+      return 'tomorrow';
+    case 'weekend':
+      return 'weekend';
+    default:
+      return 'all';
+  }
+}
 
 function dateRange(filter: DateFilter) {
   if (filter === 'all') return {};
@@ -44,18 +58,33 @@ export default function DiscoverPage() {
 }
 function DiscoverGames() {
   const params = useSearchParams();
-  const [cityId, setCityId] = useState(params.get('city') ?? '');
-  const [filter, setFilter] = useState<DateFilter>('all');
-  // Stable query timestamps until the user switches filters; avoid a new query key on every render.
-  const [range, setRange] = useState<ReturnType<typeof dateRange>>({});
+  const router = useRouter();
+  const saved = useSavedText('kopanka:search');
+  const defaults = searchPreferences(saved);
+  const cityId = params.has('city') ? (params.get('city') ?? '') : defaults.cityId;
+  const candidate = params.has('when') ? params.get('when') : defaults.filter;
+  const filter = validDateFilter(candidate);
+  // Keep timestamp objects stable between requests. Recompute the chosen range
+  // on an explicit filter change, including a click after local midnight.
+  const [ranges, setRanges] = useState(() => ({
+    all: {},
+    today: dateRange('today'),
+    tomorrow: dateRange('tomorrow'),
+    weekend: dateRange('weekend'),
+  }));
+  const range = ranges[filter];
+  const choose = (city: string, when: DateFilter) => {
+    setRanges((previous) => ({ ...previous, [when]: dateRange(when) }));
+    writeSaved('kopanka:search', JSON.stringify({ cityId: city, filter: when }));
+    const query = new URLSearchParams({ city, when });
+    router.replace(`/?${query.toString()}#games`, { scroll: false });
+  };
+  const setCityId = (city: string) => choose(city, filter);
   const events = trpc.events.list.useQuery({ ...range, ...(cityId ? { cityId } : {}) });
   const me = trpc.auth.me.useQuery(undefined, { retry: false });
   const guest = !me.isLoading && !me.data;
   const GamesHeading = guest ? 'h2' : 'h1';
-  const chooseFilter = (value: DateFilter) => {
-    setFilter(value);
-    setRange(dateRange(value));
-  };
+  const chooseFilter = (value: DateFilter) => choose(cityId, value);
 
   return (
     <div className="space-y-8 md:space-y-10">
@@ -152,7 +181,10 @@ function DiscoverGames() {
                 : 'Переглянь інші дати або створи власний матч.'}
             </p>
             {cityId ? (
-              <GameSubscription cityId={cityId} returnTo={`/?city=${encodeURIComponent(cityId)}`} />
+              <GameSubscription
+                cityId={cityId}
+                returnTo={`/?${new URLSearchParams({ city: cityId, when: filter }).toString()}`}
+              />
             ) : (
               <p className="mt-4 text-sm text-muted-foreground">
                 Обери місто вище, щоб підписатися на нові ігри.

@@ -1,13 +1,20 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { CalendarDays, MapPin, Users, Star, Scale, Trash2, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { trpc } from '@/lib/trpc';
 import { errorMessage } from '@/lib/errors';
 import { track } from '@/lib/analytics';
+import {
+  GameDirections,
+  OrganizerContact,
+  CalendarDownload,
+  ReminderControl,
+  WaitlistControl,
+} from '@/components/game-comfort';
 import { ShareGame } from '@/components/share-game';
 import { loginFor, participationPrice, GAME_LEVEL_LABEL } from '@/lib/game-flow';
 import { Card } from '@/components/ui/card';
@@ -31,12 +38,29 @@ export default function EventPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const utils = trpc.useUtils();
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 30000);
+    return () => clearInterval(timer);
+  }, []);
+  const [confirmLeave, setConfirmLeave] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const ev = trpc.events.get.useQuery({ id });
+  const ev = trpc.events.get.useQuery({ id }, { refetchInterval: 30_000 });
   const me = trpc.auth.me.useQuery(undefined, { retry: false });
 
-  const refresh = () => utils.events.get.invalidate({ id });
-  const onErr = (e: unknown) => toast.error(errorMessage(e));
+  const refresh = () =>
+    Promise.all([
+      utils.events.get.invalidate({ id }),
+      utils.events.myState.invalidate({ eventId: id }),
+      utils.events.list.invalidate(),
+      utils.events.mine.invalidate(),
+    ]);
+  const onErr = (e: unknown) => {
+    toast.error(errorMessage(e));
+    // The server may have completed a mutation even if the response was lost.
+    // Reconcile participation before the player tries again.
+    void refresh();
+  };
 
   const join = trpc.events.join.useMutation({
     onSuccess: () => {
@@ -48,6 +72,7 @@ export default function EventPage() {
   });
   const leave = trpc.events.leave.useMutation({
     onSuccess: () => {
+      setConfirmLeave(false);
       toast('Ти вийшов з гри');
       refresh();
     },
@@ -90,7 +115,22 @@ export default function EventPage() {
     onError: onErr,
   });
   if (ev.isLoading) return <Skeleton className="h-96 w-full rounded-xl" />;
-  if (ev.error || !ev.data) return <Card className="p-8 text-center text-sm">Гру не знайдено</Card>;
+  if (!ev.data)
+    return (
+      <Card className="space-y-4 p-8 text-center text-sm" role="alert">
+        <p>
+          {ev.error?.data?.code === 'NOT_FOUND'
+            ? 'Гру не знайдено або її видалено'
+            : 'Не вдалося завантажити гру. Перевір з’єднання й спробуй ще раз.'}
+        </p>
+        <Button variant="outline" onClick={() => ev.refetch()}>
+          Спробувати ще
+        </Button>
+        <Link href="/" className="block text-primary">
+          Переглянути інші ігри
+        </Link>
+      </Card>
+    );
 
   const e = ev.data;
   const userId = me.data?.user.id;
@@ -99,11 +139,13 @@ export default function EventPage() {
   const full = e.availableSlots <= 0;
   const ratingOpen = !!e.ratingClosesAt && new Date() <= new Date(e.ratingClosesAt);
   const canRate = e.status === 'FINISHED' && mine?.status === 'ATTENDED' && ratingOpen;
-  const canJoin = e.status === 'UPCOMING' && !mine && !full;
+  const open = e.status === 'UPCOMING' && +new Date(e.startAt) > now;
+  const canJoin = open && !mine && !full;
+  const canLeave = open && +new Date(e.startAt) >= now + 60 * 60_000;
   // Mirrors inviteToEvent: the organizer or anyone already in the game can invite.
   const canInvite = e.status === 'UPCOMING' && (isOrganizer || !!mine);
   // Every slot is taken: the next player can open another team (up to 4).
-  const canOpenTeam = e.canAddTeam && !mine;
+  const canOpenTeam = open && e.canAddTeam && !mine;
   const canDelete = isOrganizer && e.joinedCount === 0 && e.status !== 'FINISHED';
 
   // Mobile: one column in the original order (aside is `display: contents`, so its
@@ -111,6 +153,14 @@ export default function EventPage() {
   // Desktop: details/controls in a sticky left column, the pitch on the right.
   return (
     <div className="flex flex-col gap-4 lg:grid lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)] lg:items-start lg:gap-8">
+      {ev.isError && (
+        <Card className="order-1 space-y-2 p-4 lg:col-span-2" role="alert">
+          <p className="text-sm">Не вдалося оновити гру. Показані останні отримані дані.</p>
+          <Button variant="outline" onClick={() => ev.refetch()}>
+            Оновити
+          </Button>
+        </Card>
+      )}
       <aside className="contents lg:sticky lg:top-24 lg:flex lg:flex-col lg:gap-4">
         <Card className="order-1 space-y-3 p-5">
           <div className="flex items-center gap-2 text-sm font-medium">
@@ -140,6 +190,7 @@ export default function EventPage() {
             <Badge variant="outline">{EVENT_STATUS_LABEL[e.status] ?? e.status}</Badge>
           </div>
           <p className="text-xs text-muted-foreground">Організатор: {e.organizer.name}</p>
+          <GameDirections game={e} />
         </Card>
 
         <Card className="order-2 space-y-3 p-5">
@@ -158,6 +209,33 @@ export default function EventPage() {
             </p>
           )}
         </Card>
+        <OrganizerContact key={e.id} game={e} isOrganizer={isOrganizer} />
+        {mine && (e.status === 'UPCOMING' || e.status === 'IN_PROGRESS') && (
+          <Card className="order-2 space-y-3 border-primary/50 p-5" role="status">
+            <h2 className="text-lg font-semibold text-primary">
+              {e.status === 'IN_PROGRESS' ? 'Гра розпочалася — ти в складі' : 'Ти записаний на гру'}
+            </h2>
+            <p className="text-sm">
+              {formatDate(e.startAt)} · {formatRange(e.startAt, e.endAt)}
+            </p>
+            <p className="text-sm">
+              {e.teams.find((team) => team.id === mine.teamId)?.name ?? 'Команда ще не обрана'} ·{' '}
+              {POSITION_LABEL[mine.preferredPosition as PositionValue]}
+            </p>
+            {open && (
+              <>
+                <CalendarDownload game={e} />
+                <ReminderControl eventId={e.id} />
+              </>
+            )}
+            {e.status === 'UPCOMING' && (
+              <p className="text-xs text-muted-foreground">
+                Вийти з гри можна щонайменше за годину до початку. Пізніше зв’яжися з організатором.
+              </p>
+            )}
+          </Card>
+        )}
+        {!mine && <WaitlistControl eventId={e.id} loggedIn={!!me.data} full={full} open={open} />}
         <ShareGame eventId={e.id} venue={e.field.venue.name} />
         {isOrganizer && (
           <Link
@@ -239,14 +317,38 @@ export default function EventPage() {
         )}
 
         {mine && e.status === 'UPCOMING' && (
-          <Button
-            variant="outline"
-            className="order-5 w-full"
-            disabled={leave.isPending}
-            onClick={() => leave.mutate({ eventId: e.id })}
-          >
-            Вийти з гри ({POSITION_LABEL[mine.preferredPosition as PositionValue]})
-          </Button>
+          <div className="order-5 space-y-2">
+            <Button
+              variant={confirmLeave ? 'destructive' : 'outline'}
+              className="w-full"
+              disabled={leave.isPending || !canLeave}
+              onClick={() =>
+                confirmLeave ? leave.mutate({ eventId: e.id }) : setConfirmLeave(true)
+              }
+            >
+              {leave.isPending
+                ? 'Виходимо…'
+                : confirmLeave
+                  ? 'Підтвердити вихід із гри'
+                  : `Вийти з гри (${POSITION_LABEL[mine.preferredPosition as PositionValue]})`}
+            </Button>
+            {confirmLeave && (
+              <Button
+                variant="ghost"
+                className="w-full"
+                disabled={leave.isPending}
+                onClick={() => setConfirmLeave(false)}
+              >
+                Залишитися в грі
+              </Button>
+            )}
+            {!canLeave && (
+              <p className="text-xs text-muted-foreground">
+                До початку менше години або час гри вже настав. Зв’яжися з організатором, якщо не
+                зможеш прийти.
+              </p>
+            )}
+          </div>
         )}
 
         {/* Organizer lifecycle controls */}

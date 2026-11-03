@@ -24,3 +24,6 @@ export * from './invitations/respond.js';
 export * from './cities/cities.js';
 export * from './events/repeat.js';
 export * from './notifications/subscriptions.js';
+export * from './events/contact.js';
+export * from './events/waitlist.js';
+export * from './events/reminders.js';

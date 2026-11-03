@@ -1,6 +1,6 @@
 import type { FastifyBaseLogger } from 'fastify';
 import { prisma } from '@app/db';
-import { finishOverdueEvents, resolveDueMvps } from '@app/domain';
+import { finishOverdueEvents, resolveDueMvps, sendGameReminders } from '@app/domain';
 
 const INTERVAL_MS = 5 * 60 * 1000;
 
@@ -20,6 +20,8 @@ export function startScheduler(log: FastifyBaseLogger): () => void {
       if (finished.length || cancelled.length) {
         log.info({ finished, cancelled }, 'auto-finish: closed overdue games');
       }
+      const reminders = await sendGameReminders(prisma);
+      if (reminders) log.info({ count: reminders }, 'reminders: sent in-app reminders');
       const mvps = await resolveDueMvps(prisma);
       if (mvps.length) log.info({ events: mvps }, 'mvp: voting closed');
     } catch (err) {

@@ -7,6 +7,7 @@ import type {
 } from '@app/db';
 import { DomainError } from '../errors.js';
 import { canAddTeam, eventCapacity, MAX_TEAMS } from './capacity.js';
+import { notifyWaitingPlayers } from './waitlist.js';
 import { teamNames } from './team-names.js';
 
 const ACTIVE_STATUSES: ParticipantStatus[] = ['JOINED', 'ATTENDED'];
@@ -21,6 +22,7 @@ interface LockedEvent {
   status: EventStatus;
   numberOfTeams: number;
   playersPerTeam: number;
+  startAt: Date;
 }
 
 export interface JoinGuardContext {
@@ -93,10 +95,12 @@ export interface JoinInput {
 export async function joinEvent(prisma: PrismaClient, input: JoinInput): Promise<EventParticipant> {
   return prisma.$transaction(async (tx) => {
     const [event] = await tx.$queryRaw<LockedEvent[]>`
-      SELECT id, status, "numberOfTeams", "playersPerTeam"
+      SELECT id, status, "numberOfTeams", "playersPerTeam", "startAt"
       FROM "Event" WHERE id = ${input.eventId} FOR UPDATE
     `;
     if (!event) throw new DomainError('NOT_FOUND', 'Event not found');
+    if (event.startAt <= new Date())
+      throw new DomainError('INVALID_STATE', 'Event is not open for joining');
 
     let teamId = input.teamId ?? null;
     if (input.newTeam) {
@@ -161,13 +165,17 @@ export async function joinEvent(prisma: PrismaClient, input: JoinInput): Promise
       status: 'JOINED' as const,
       preferredPosition: input.position,
       teamId,
+      remindBeforeGame: false,
+      reminderSentAt: null,
     };
 
-    if (existing) {
-      return tx.eventParticipant.update({ where: { id: existing.id }, data });
-    }
-    return tx.eventParticipant.create({
-      data: { eventId: input.eventId, userId: input.userId, ...data },
-    });
+    const participant = existing
+      ? await tx.eventParticipant.update({ where: { id: existing.id }, data })
+      : await tx.eventParticipant.create({
+          data: { eventId: input.eventId, userId: input.userId, ...data },
+        });
+    await tx.eventWaitlist.deleteMany({ where: { eventId: input.eventId, userId: input.userId } });
+    if (input.newTeam) await notifyWaitingPlayers(tx, input.eventId, event.startAt);
+    return participant;
   });
 }

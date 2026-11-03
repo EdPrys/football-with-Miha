@@ -1,5 +1,6 @@
 import type { Event, GameLevel, PrismaClient } from '@app/db';
 import { DomainError } from '../errors.js';
+import { organizerContacts } from './contact.js';
 import { teamNames } from './team-names.js';
 
 export interface CreateEventInput {
@@ -12,6 +13,8 @@ export interface CreateEventInput {
   priceMinor?: number | null;
   level?: GameLevel | null;
   newcomerInfo?: string | null;
+  organizerPhone?: string | null;
+  organizerTelegram?: string | null;
 }
 
 export const MIN_TEAMS = 2;
@@ -52,6 +55,7 @@ export async function createEvent(prisma: PrismaClient, input: CreateEventInput)
     throw new DomainError('VALIDATION', 'Newcomer instructions are too long');
   }
 
+  const contacts = organizerContacts(input.organizerPhone, input.organizerTelegram);
   // Persist the game and subscriber notifications together: a rollback never
   // leaves a notification pointing to a game that was not created.
   return prisma.$transaction(async (tx) => {
@@ -63,6 +67,7 @@ export async function createEvent(prisma: PrismaClient, input: CreateEventInput)
     if (!field.isActive) throw new DomainError('INVALID_STATE', 'Field is not active');
     const event = await tx.event.create({
       data: {
+        ...contacts,
         organizerId: input.organizerId,
         fieldId: input.fieldId,
         startAt: input.startAt,

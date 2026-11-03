@@ -25,6 +25,7 @@ describe('assertJoinable', () => {
 describe('joinEvent goalkeeper slot', () => {
   function prismaWith(keepersOnTeam: number) {
     const tx = {
+      eventWaitlist: { deleteMany: vi.fn(), findMany: vi.fn().mockResolvedValue([]) },
       $queryRaw: vi
         .fn()
         .mockResolvedValue([{ id: 'e1', status: 'UPCOMING', numberOfTeams: 2, playersPerTeam: 5 }]),
@@ -63,6 +64,7 @@ describe('joinEvent goalkeeper slot', () => {
 describe('joinEvent opening a new team', () => {
   function prismaWith(event: { numberOfTeams: number; status?: string }, activeCount: number) {
     const tx = {
+      eventWaitlist: { deleteMany: vi.fn(), findMany: vi.fn().mockResolvedValue([]) },
       $queryRaw: vi
         .fn()
         .mockResolvedValue([{ id: 'e1', status: 'UPCOMING', playersPerTeam: 5, ...event }]),

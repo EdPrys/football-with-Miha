@@ -3,6 +3,12 @@ import { TRPCClientError } from '@trpc/client';
 // API messages are English; players see Ukrainian. Unknown messages fall back
 // to a generic text per error code, so a raw code like BAD_REQUEST never leaks.
 const MESSAGES: Record<string, string> = {
+  'Waitlist is closed': 'Лист очікування для цієї гри вже закритий',
+  'Reminder is not available for this game': 'Нагадування доступне лише до початку гри',
+  'Join the game before enabling a reminder': 'Спочатку запишися на гру, щоб увімкнути нагадування',
+  'Invalid organizer phone': 'Перевір номер телефону: від 7 до 15 цифр',
+  'Invalid organizer Telegram username':
+    'Вкажи Telegram username, наприклад @username, без посилання',
   'Email is already registered': 'Цей email вже зареєстрований. Спробуй увійти.',
   'Invalid email or password': 'Невірний email або пароль',
   'Password must be at least 8 characters': 'Пароль має містити щонайменше 8 символів',

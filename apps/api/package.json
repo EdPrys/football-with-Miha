@@ -10,7 +10,8 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "start:prod": "tsx src/index.ts",
-    "migrate:deploy": "prisma migrate deploy --schema ../../packages/db/prisma/schema.prisma"
+    "migrate:deploy": "prisma migrate deploy --schema ../../packages/db/prisma/schema.prisma",
+    "test:journey": "tsx scripts/check-full-journey.mts"
   },
   "dependencies": {
     "@app/db": "workspace:*",
@@ -28,6 +29,7 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@trpc/client": "11.19.0",
     "@types/jsonwebtoken": "^9.0.7",
     "@types/node": "^22.10.2",
     "typescript": "^5.7.2",

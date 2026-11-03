@@ -26,6 +26,18 @@ real games and measurement of first participation and return. City, live game
 supply, budget, monetization and production analytics remain unconfirmed.
 Paid campaigns are not authorized by this work. See `MARKETING_PILOT.md`.
 
+## Player comfort (2026-11-03)
+
+Implemented contacts/directions, clear participation state, calendar export,
+opt-in in-app reminders, slot alerts, remembered search and recoverable drafts.
+Local technical validation is recorded in `PLAYER_COMFORT.md`. A full synthetic-player
+HTTP/API journey also passed: see `FULL_JOURNEY.md` and `FULL_JOURNEY_RESULT.json`.
+
+Still pending: visual iOS/Android checks, calendar imports on actual devices and
+sessions with real players. The Mac UI automation service could not start;
+no real-user findings have been claimed. Protocol: `USABILITY_TEST.md`.
+Production deployment and delivery remain separately unverified.
+
 ## Production checks
 
 - Verify Telegram bot/channel variables and posting permissions in the intended deployment.

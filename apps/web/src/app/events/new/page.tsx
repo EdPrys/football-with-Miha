@@ -1,12 +1,13 @@
 'use client';
 
-import { Suspense, useState, type FormEvent } from 'react';
+import { Suspense, useEffect, useRef, useState, type FormEvent } from 'react';
 import { MapPin, CalendarDays, Users, ArrowRight } from 'lucide-react';
 import { CitySelect } from '@/components/city-select';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import type { AppRouterOutputs } from '@app/api';
+import { useSavedText, writeSaved, gameDraft, type GameDraft } from '@/lib/saved-state';
 import { loginFor, nextWeeklyDates, GAME_LEVEL_LABEL } from '@/lib/game-flow';
 import { trpc } from '@/lib/trpc';
 import { errorMessage } from '@/lib/errors';
@@ -42,12 +43,16 @@ export default function NewEventPage() {
 function NewEventLoader() {
   const params = useSearchParams();
   const sourceId = params.get('repeat');
+  const [revision, setRevision] = useState(0);
   const me = trpc.auth.me.useQuery(undefined, { retry: false });
+  const draftKey = `kopanka:game-draft:${me.data?.user.id ?? 'guest'}:${sourceId ?? 'new'}`;
+  const saved = useSavedText(draftKey);
+
   const source = trpc.events.repeatTemplate.useQuery(
     { eventId: sourceId ?? '' },
     { enabled: !!sourceId && !!me.data, retry: false },
   );
-  if (sourceId && me.isLoading) return <Skeleton className="h-40 w-full rounded-xl" />;
+  if (me.isLoading || saved === null) return <Skeleton className="h-40 w-full rounded-xl" />;
   if (sourceId && !me.data)
     return (
       <Card className="space-y-4 p-6 text-center">
@@ -73,38 +78,123 @@ function NewEventLoader() {
         </Link>
       </Card>
     );
-  return <NewEventForm key={sourceId ?? 'new'} template={source.data} />;
+  return (
+    <NewEventForm
+      key={`${draftKey}:${revision}`}
+      template={source.data}
+      draftKey={draftKey}
+      initialDraft={gameDraft(saved)}
+      onDiscard={() => {
+        writeSaved(draftKey, null);
+        setRevision((value) => value + 1);
+      }}
+    />
+  );
 }
-function NewEventForm({ template }: { template?: Template }) {
+function NewEventForm({
+  template,
+  draftKey,
+  initialDraft,
+  onDiscard,
+}: {
+  template?: Template;
+  draftKey: string;
+  initialDraft: GameDraft;
+  onDiscard: () => void;
+}) {
   const router = useRouter();
   const me = trpc.auth.me.useQuery(undefined, { retry: false });
   const venues = trpc.venues.list.useQuery();
 
   const draft = template ? nextWeeklyDates(template.startAt, template.endAt) : undefined;
-  const [cityId, setCityId] = useState(template?.cityId ?? 'kyiv');
-  const [venueId, setVenueId] = useState(template?.venueId ?? '');
-  const [fieldId, setFieldId] = useState(template?.fieldId ?? '');
+  const [cityId, setCityId] = useState(initialDraft.cityId ?? template?.cityId ?? 'kyiv');
+  const [venueId, setVenueId] = useState(initialDraft.venueId ?? template?.venueId ?? '');
+  const [fieldId, setFieldId] = useState(initialDraft.fieldId ?? template?.fieldId ?? '');
   // iOS shows an empty date input as a blank box, so start from today.
   const today = new Date().toLocaleDateString('sv-SE'); // YYYY-MM-DD, local time
-  const [date, setDate] = useState(draft?.startAt.toLocaleDateString('sv-SE') ?? today);
-  const [endDate, setEndDate] = useState(draft?.endAt.toLocaleDateString('sv-SE') ?? today);
+  const [date, setDate] = useState(
+    initialDraft.date ?? draft?.startAt.toLocaleDateString('sv-SE') ?? today,
+  );
+  const [endDate, setEndDate] = useState(
+    initialDraft.endDate ?? draft?.endAt.toLocaleDateString('sv-SE') ?? today,
+  );
   const [startTime, setStartTime] = useState(
-    draft
-      ? `${String(draft.startAt.getHours()).padStart(2, '0')}:${String(draft.startAt.getMinutes()).padStart(2, '0')}`
-      : '20:00',
+    initialDraft.startTime ??
+      (draft
+        ? `${String(draft.startAt.getHours()).padStart(2, '0')}:${String(draft.startAt.getMinutes()).padStart(2, '0')}`
+        : '20:00'),
   );
   const [endTime, setEndTime] = useState(
-    draft
-      ? `${String(draft.endAt.getHours()).padStart(2, '0')}:${String(draft.endAt.getMinutes()).padStart(2, '0')}`
-      : '22:00',
+    initialDraft.endTime ??
+      (draft
+        ? `${String(draft.endAt.getHours()).padStart(2, '0')}:${String(draft.endAt.getMinutes()).padStart(2, '0')}`
+        : '22:00'),
   );
-  const [numberOfTeams, setNumberOfTeams] = useState(String(template?.numberOfTeams ?? 2));
-  const [playersPerTeam, setPlayersPerTeam] = useState(String(template?.playersPerTeam ?? 5));
+  const [numberOfTeams, setNumberOfTeams] = useState(
+    initialDraft.numberOfTeams ?? String(template?.numberOfTeams ?? 2),
+  );
+  const [playersPerTeam, setPlayersPerTeam] = useState(
+    initialDraft.playersPerTeam ?? String(template?.playersPerTeam ?? 5),
+  );
   const [price, setPrice] = useState(
-    template?.priceMinor == null ? '' : String(template.priceMinor / 100),
+    initialDraft.price ?? (template?.priceMinor == null ? '' : String(template.priceMinor / 100)),
   );
-  const [level, setLevel] = useState<NonNullable<Template['level']> | ''>(template?.level ?? '');
-  const [newcomerInfo, setNewcomerInfo] = useState(template?.newcomerInfo ?? '');
+  const [level, setLevel] = useState<NonNullable<Template['level']> | ''>(
+    (initialDraft.level === '' || Object.hasOwn(GAME_LEVEL_LABEL, initialDraft.level ?? '')
+      ? initialDraft.level
+      : (template?.level ?? '')) as NonNullable<Template['level']> | '',
+  );
+  const [newcomerInfo, setNewcomerInfo] = useState(
+    initialDraft.newcomerInfo ?? template?.newcomerInfo ?? '',
+  );
+  const [organizerPhone, setOrganizerPhone] = useState(
+    initialDraft.organizerPhone ?? template?.organizerPhone ?? '',
+  );
+  const [organizerTelegram, setOrganizerTelegram] = useState(
+    initialDraft.organizerTelegram ?? template?.organizerTelegram ?? '',
+  );
+  const [restored] = useState(Object.keys(initialDraft).length > 0);
+  const completed = useRef(false);
+  useEffect(() => {
+    if (!completed.current && me.data && me.data.user.role !== 'PLAYER') {
+      writeSaved(
+        draftKey,
+        JSON.stringify({
+          cityId,
+          venueId,
+          fieldId,
+          date,
+          endDate,
+          startTime,
+          endTime,
+          numberOfTeams,
+          playersPerTeam,
+          price,
+          level,
+          newcomerInfo,
+          organizerPhone,
+          organizerTelegram,
+        }),
+      );
+    }
+  }, [
+    draftKey,
+    me.data,
+    cityId,
+    venueId,
+    fieldId,
+    date,
+    endDate,
+    startTime,
+    endTime,
+    numberOfTeams,
+    playersPerTeam,
+    price,
+    level,
+    newcomerInfo,
+    organizerPhone,
+    organizerTelegram,
+  ]);
   // Invitees belong to one city; picking a field in another city drops them.
   const [invites, setInvites] = useState<{ cityId: string; ids: string[] }>({
     cityId: '',
@@ -113,6 +203,8 @@ function NewEventForm({ template }: { template?: Template }) {
 
   const create = trpc.events.create.useMutation({
     onSuccess: (d) => {
+      completed.current = true;
+      writeSaved(draftKey, null);
       track('create_event');
       toast.success(d.invited ? `Гру створено! Запрошено гравців: ${d.invited}` : 'Гру створено!');
       router.push(`/events/${d.id}`);
@@ -183,6 +275,8 @@ function NewEventForm({ template }: { template?: Template }) {
       priceMinor: amount === null ? null : Math.round(amount * 100),
       level: level || null,
       newcomerInfo: newcomerInfo.trim() || null,
+      organizerPhone: organizerPhone.trim() || null,
+      organizerTelegram: organizerTelegram.trim() || null,
     });
   };
 
@@ -201,6 +295,25 @@ function NewEventForm({ template }: { template?: Template }) {
             : 'Обери майданчик, час і формат. Гравців можна запросити одразу.'}
         </p>
       </div>
+      <p className="text-xs text-muted-foreground">
+        {restored
+          ? 'Чернетку відновлено. Перевір дату та умови перед створенням.'
+          : 'Дані форми зберігаються в цьому браузері, якщо доступне локальне сховище.'}{' '}
+        Вибір гравців для запрошення потрібно підтвердити заново після перезавантаження.
+      </p>
+      {restored && (
+        <Button
+          type="button"
+          variant="outline"
+          disabled={create.isPending}
+          onClick={() => {
+            completed.current = true;
+            onDiscard();
+          }}
+        >
+          Очистити чернетку
+        </Button>
+      )}
       <Card className="rounded-2xl p-5 md:p-7">
         <form onSubmit={submit} className="space-y-7">
           <div className="flex items-center gap-2 border-b border-border pb-3 text-sm font-semibold">
@@ -418,6 +531,29 @@ function NewEventForm({ template }: { template?: Template }) {
               </select>
             </div>
             <div className="space-y-1.5">
+              <Label htmlFor="organizer-phone">Телефон організатора (необов’язково)</Label>
+              <Input
+                id="organizer-phone"
+                type="tel"
+                value={organizerPhone}
+                maxLength={30}
+                onChange={(e) => setOrganizerPhone(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="organizer-telegram">Telegram організатора (необов’язково)</Label>
+              <Input
+                id="organizer-telegram"
+                placeholder="@username"
+                value={organizerTelegram}
+                maxLength={33}
+                onChange={(e) => setOrganizerTelegram(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Телефон і Telegram будуть публічно доступні на сторінці цієї гри.
+              </p>
+            </div>
+            <div className="space-y-1.5">
               <Label htmlFor="newcomer-info">Що знати перед першою грою</Label>
               <textarea
                 id="newcomer-info"
@@ -455,6 +591,14 @@ function NewEventForm({ template }: { template?: Template }) {
             <p className="text-sm text-muted-foreground">
               Не вдалося завантажити гравців для запрошення. Гру можна створити без запрошень.
             </p>
+          )}
+          {create.error && (
+            <div role="alert" className="rounded-xl border border-destructive p-3 text-sm">
+              <p>{errorMessage(create.error)}</p>
+              <p className="mt-1 text-muted-foreground">
+                Дані залишилися у формі. Перевір помилку й натисни «Створити гру» ще раз.
+              </p>
+            </div>
           )}
           <Button
             type="submit"

@@ -19,6 +19,8 @@ export async function repeatEventTemplate(
       priceMinor: true,
       level: true,
       newcomerInfo: true,
+      organizerPhone: true,
+      organizerTelegram: true,
       field: { select: { venueId: true, venue: { select: { cityId: true } } } },
     },
   });
@@ -34,6 +36,8 @@ export async function repeatEventTemplate(
     priceMinor: event.priceMinor,
     level: event.level,
     newcomerInfo: event.newcomerInfo,
+    organizerPhone: event.organizerPhone,
+    organizerTelegram: event.organizerTelegram,
     venueId: event.field.venueId,
     cityId: event.field.venue.cityId,
   };
