@@ -1,0 +1,13 @@
+{
+  "mode": "dry-run",
+  "city": "",
+  "sources": [],
+  "siteUrl": "https://kopanka.pro",
+  "campaign": "organizers_pilot",
+  "maxNewContactsPerDay": 3,
+  "maxMessagesPerDay": 15,
+  "minSendIntervalSeconds": 300,
+  "maxModelCallsPerDay": 30,
+  "pollSeconds": 60,
+  "sourceMessageLimit": 30
+}

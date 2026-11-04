@@ -111,3 +111,14 @@ real-user/visual testing has not been completed.
 Read `AGENTS.md` and `docs/DEVELOPMENT.md`. Tasks branch from `dev` and merge
 through PRs into `dev`; releases go `dev → main` using a merge commit, then
 `main → dev` for history synchronization. Never push directly to protected branches.
+
+## Organizer outreach (2026-11-04)
+
+`apps/outreach` is a separate, offline-preparable Telegram account worker, not the
+existing announcement bot. It has no production DB access and does not run in
+`pnpm dev`. Policy/state transitions live in `packages/domain/src/outreach`.
+Default mode is dry-run; initial contacts require approved candidates from
+configured source groups. Never retry uncertain delivery automatically or erase
+opt-out records; model output cannot choose recipients or execute tools.
+Account connection, model configuration, pilot city/sources and live verification
+are still pending. See `docs/OUTREACH_AGENT.md`.

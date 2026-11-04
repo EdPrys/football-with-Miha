@@ -28,3 +28,5 @@ export * from './events/contact.js';
 export * from './events/waitlist.js';
 export * from './events/reminders.js';
 export * from './players/teammates.js';
+
+export * from './outreach/policy.js';
