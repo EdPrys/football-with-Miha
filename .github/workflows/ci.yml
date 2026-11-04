@@ -1,27 +1,58 @@
 name: CI
 on:
   push:
-    branches: [main]
+    branches: [dev, main]
   pull_request:
+    branches: [dev, main]
+    types: [opened, synchronize, reopened, edited, ready_for_review]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
+  branch-policy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node --test .github/scripts/check-branch-route.test.mjs
+      - run: node .github/scripts/check-branch-route.mjs
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+          HEAD_REF: ${{ github.head_ref }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          REPOSITORY: ${{ github.repository }}
+
   verify:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     services:
       postgres:
         image: postgres:16-alpine
         env:
           POSTGRES_USER: football
           POSTGRES_PASSWORD: football
-          POSTGRES_DB: football
+          POSTGRES_DB: kopanka_journey_test_ci
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U football"
+          --health-cmd "pg_isready -U football -d kopanka_journey_test_ci"
           --health-interval 5s --health-timeout 5s --health-retries 10
     env:
-      DATABASE_URL: postgresql://football:football@localhost:5432/football?schema=public
+      DATABASE_URL: postgresql://football:football@localhost:5432/kopanka_journey_test_ci?schema=public
+      INTEGRATION_DATABASE_URL: postgresql://football:football@localhost:5432/kopanka_journey_test_ci?schema=public
       JWT_SECRET: ci-secret
+      NEXT_TELEMETRY_DISABLED: 1
+      NEXT_PUBLIC_API_URL: http://localhost:4000
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -34,8 +65,11 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @app/db exec prisma generate
       - run: pnpm --filter @app/db exec prisma migrate deploy
-      - run: pnpm -r --if-present typecheck
-      - run: pnpm -r --if-present test
-      - run: pnpm --filter @app/web build
-        env:
-          NEXT_PUBLIC_API_URL: http://localhost:4000
+      - run: pnpm typecheck
+      - run: pnpm test
+      - name: Full player journey against disposable PostgreSQL
+        run: pnpm test:journey
+      - name: Build player web
+        run: pnpm --filter @app/web exec next build --webpack
+      - name: Build admin web
+        run: pnpm --filter @app/admin-web exec next build --webpack
