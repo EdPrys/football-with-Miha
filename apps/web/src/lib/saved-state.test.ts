@@ -19,6 +19,18 @@ describe('saved preferences and drafts', () => {
     ).toEqual({ cityId: 'kyiv', price: '0' });
     expect(gameDraft(JSON.stringify({ newcomerInfo: 'x'.repeat(2001) }))).toEqual({});
   });
+  it('restores the explicit payment choice, including false with a retained amount', () => {
+    expect(gameDraft('{"paymentRequired":true,"price":"150.50"}')).toEqual({
+      paymentRequired: true,
+      price: '150.50',
+    });
+    expect(gameDraft('{"paymentRequired":false,"price":"150.50"}')).toEqual({
+      paymentRequired: false,
+      price: '150.50',
+    });
+    expect(gameDraft('{"paymentRequired":"false"}')).toEqual({});
+    expect(gameDraft('{"price":"150"}')).toEqual({ price: '150' });
+  });
   it('recovers gracefully when browser storage is blocked', () => {
     vi.stubGlobal('localStorage', {
       getItem: () => {

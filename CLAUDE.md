@@ -87,7 +87,9 @@ catalogue only; never document default admin credentials that do not exist.
 ## Acquisition flow (2026-11-03)
 
 Game details: optional UAH kopecks `priceMinor` (null unknown, 0 free), GameLevel,
-and public newcomerInfo. Never infer missing prices or game level. City-specific
+and public newcomerInfo. The creation form explicitly offers a payment checkbox:
+unchecked creates a free game (`priceMinor: 0`); checked requires a positive UAH
+amount. Existing/API null prices remain unknown. Never infer missing game level. City-specific
 new-game subscriptions are explicit opt-in and in-app only; createEvent writes
 the game and subscriber notifications in one transaction. Repeat templates are
 organizer-owned queries; create a separate game after review, without copying
