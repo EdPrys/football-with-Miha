@@ -236,7 +236,12 @@ export default function EventPage() {
           </Card>
         )}
         {!mine && <WaitlistControl eventId={e.id} loggedIn={!!me.data} full={full} open={open} />}
-        <ShareGame eventId={e.id} venue={e.field.venue.name} />
+        <ShareGame
+          eventId={e.id}
+          venue={e.field.venue.name}
+          organizer={isOrganizer}
+          campaign={isOrganizer ? me.data?.user.outreachCampaign : undefined}
+        />
         {isOrganizer && (
           <Link
             href={`/events/new?repeat=${encodeURIComponent(e.id)}`}

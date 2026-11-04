@@ -209,3 +209,17 @@ URL-encoded `input`, для `mutation` — POST. Браузерні клієнт
 Список обчислюється з історії, без запису дружби й окремої міграції.
 `players.matchHistory` повертає лише ATTENDED-участь у завершених іграх;
 скасовані записи й неявки не є зіграними матчами.
+
+## Optional organizer outreach counts
+
+`POST /internal/outreach/metrics` is separate from tRPC and absent unless
+`OUTREACH_METRICS_TOKEN` (32+ characters) is set. A dedicated Bearer token and
+`{ "campaign": "organizers_pilot__0123456789abcdef" }` return aggregate cohort
+counts only; campaign must match `OUTREACH_CAMPAIGN_PREFIX` (default
+`organizers_pilot`). No user/admin JWT, identities or message contents are used.
+Responses are not cached. See [OUTREACH_AGENT.md](OUTREACH_AGENT.md).
+
+Authenticated `auth.me`, `auth.login` and `auth.register` responses include one's
+own `outreachCampaign` only for a valid Telegram/outreach signup campaign. This
+field is not added to public player/event profiles; organizers use it when
+sharing their game invitation so new players can be attributed to the same group.
