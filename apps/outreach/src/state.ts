@@ -12,7 +12,13 @@ export const Config = z
       .string()
       .url()
       .refine((v) => new URL(v).protocol === 'https:'),
-    campaign: z.string().regex(/^[a-z0-9_]+$/),
+    campaign: z
+      .string()
+      .max(100)
+      .regex(/^[a-z0-9_]+$/),
+    maxTokensPerDay: z.number().int().min(1000).max(1000000).default(15000),
+    maxModelRepliesPerContact: z.number().int().min(1).max(10).default(3),
+    maxPilotContacts: z.number().int().min(1).max(100).default(10),
     maxNewContactsPerDay: z.number().int().min(0).max(10),
     maxMessagesPerDay: z.number().int().min(1).max(50),
     minSendIntervalSeconds: z.number().int().min(60),
@@ -50,6 +56,33 @@ const Contact = z.object({
   pendingSend: z.string().optional(),
   note: z.string().optional(),
   verifiedEventUrl: z.string().optional(),
+  campaign: z.string().optional(),
+  priority: z.number().int().optional(),
+  modelReplies: z.number().int().optional(),
+  prepared: z
+    .object({
+      key: z.string(),
+      action: z.enum(['reply', 'interested', 'decline', 'handoff']),
+      text: z.string(),
+      reason: z.string(),
+      kind: z.enum(['template', 'model']),
+    })
+    .optional(),
+  previewedKey: z.string().optional(),
+  metrics: z
+    .object({
+      observedAt: z.string(),
+      registeredUsers: z.number(),
+      organizers: z.number(),
+      gamesCreated: z.number(),
+      gamesFinished: z.number(),
+      playersJoined: z.number(),
+      newPlayersJoined: z.number(),
+      playersAttended: z.number(),
+      organizersWithRepeatGames: z.number(),
+      organizersWithRepeatFinishedGames: z.number(),
+    })
+    .optional(),
 });
 export type Contact = z.infer<typeof Contact>;
 export const State = z.object({
@@ -57,7 +90,16 @@ export const State = z.object({
   contacts: z.record(Contact),
   seen: z.array(z.string()),
   paused: z.string().optional(),
-  usage: z.record(z.object({ messages: z.number(), initial: z.number(), modelCalls: z.number() })),
+  usage: z.record(
+    z.object({
+      messages: z.number(),
+      initial: z.number(),
+      modelCalls: z.number(),
+      inputTokens: z.number().optional(),
+      outputTokens: z.number().optional(),
+      unreportedUsageCalls: z.number().optional(),
+    }),
+  ),
   lastSentAt: z.string().optional(),
 });
 export type State = z.infer<typeof State>;

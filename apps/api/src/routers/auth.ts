@@ -15,6 +15,12 @@ function publicUser(user: User) {
     avatarUrl: user.avatarUrl,
     cityId: user.cityId,
     createdAt: user.createdAt,
+    outreachCampaign:
+      user.signupSource === 'telegram' &&
+      user.signupMedium === 'outreach' &&
+      /^[a-z0-9_]{1,100}__[a-f0-9]{16}$/.test(user.signupCampaign ?? '')
+        ? user.signupCampaign
+        : null,
   };
 }
 

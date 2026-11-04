@@ -81,3 +81,15 @@ docker exec football-postgres dropdb -U football kopanka_journey_test
 Календарні дані, безпечний auth return path і browser-storage helpers додатково
 перевірені unit tests. Ці тести не замінюють натискань у браузері. Сервіс керування
 інтерфейсом Mac у цій сесії недоступний, тому візуальний E2E не заявляється.
+
+## Outreach activation extension (2026-11-04)
+
+The journey now verifies a real Telegram/outreach signup cohort against
+PostgreSQL: one organizer, two registered players (including one who leaves),
+game creation, actual joining/attendance and repeat-game counts through the
+read-only capability endpoint. It also checks that attribution is visible only
+in self-auth responses and absent from public profiles. Telegram and model
+providers remain disabled; the test creates no real messages.
+
+Set `JOURNEY_REPORT_PATH` to write an isolated run report outside
+`docs/FULL_JOURNEY_RESULT.json` when preserving that historical report.

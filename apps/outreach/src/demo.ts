@@ -36,7 +36,10 @@ export async function demo() {
     },
   };
   const model: Model = {
-    qualify: async (text) => ({ organizer: true, evidence: text }),
+    qualify: async (text, _config, onUsage) => {
+      await onUsage?.({ inputTokens: 0, outputTokens: 0 });
+      return { organizer: true, evidence: text };
+    },
     respond: async () => ({
       action: 'interested',
       text: 'Почніть із реєстрації, а у профілі натисніть «Стати організатором». Потім можна створити найближчу гру: https://kopanka.pro/events/new',
@@ -51,13 +54,20 @@ export async function demo() {
   inbox = [
     {
       id: 20,
-      text: 'Так, хочу спробувати. Як створити гру?',
+      text: 'так можна спробувати',
       at: now.toISOString(),
       direction: 'in',
     },
   ];
   await cycle(state, config, transport, model, save, new Date(now.getTime() + 301_000));
-  inbox.push({ id: 21, text: 'Стоп, більше не пишіть', at: now.toISOString(), direction: 'in' });
+  inbox.push({
+    id: 21,
+    text: 'Готово, ось гра https://kopanka.pro/events/demo-event',
+    at: now.toISOString(),
+    direction: 'in',
+  });
+  await cycle(state, config, transport, model, save, new Date(now.getTime() + 602_000));
+  inbox.push({ id: 22, text: 'Стоп, більше не пишіть', at: now.toISOString(), direction: 'in' });
   await cycle(state, config, transport, model, save, new Date(now.getTime() + 602_000));
   console.log(
     JSON.stringify(

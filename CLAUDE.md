@@ -120,5 +120,10 @@ existing announcement bot. It has no production DB access and does not run in
 Default mode is dry-run; initial contacts require approved candidates from
 configured source groups. Never retry uncertain delivery automatically or erase
 opt-out records; model output cannot choose recipients or execute tools.
+Keep copy short (3–5 sentences for the basic path); drive organizer game creation
+and registration/joining of their existing group. Template replies avoid model
+calls; persist prepared replies and reported token usage across restarts. Optional
+count-only metrics use a separate capability token and opaque cohort campaigns;
+never infer the Telegram person's identity or activation from cohort counts.
 Account connection, model configuration, pilot city/sources and live verification
 are still pending. See `docs/OUTREACH_AGENT.md`.

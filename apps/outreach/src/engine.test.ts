@@ -123,7 +123,12 @@ describe('outreach delivery policy', () => {
     expect(s.state.contacts['123']?.messages[0]?.id).toBe(10);
     expect(s.state.contacts['123']?.inboxCursor).toBe(0);
     s.transport.inbox = async () => [
-      { id: 9, text: 'Так, цікаво', direction: 'in', at: now.toISOString() },
+      {
+        id: 9,
+        text: 'Чи можна редагувати команди після початку матчу?',
+        direction: 'in',
+        at: now.toISOString(),
+      },
     ];
     await cycle(s.state, config, s.transport, s.model, s.save, new Date(now.getTime() + 600_000));
     expect(s.model.respond).toHaveBeenCalledTimes(1);
@@ -181,7 +186,128 @@ describe('outreach delivery policy', () => {
     expect(safeReply('https://kopanka.pro.evil.org', config)).toBe(false);
     expect(safeReply('https://example.net', config)).toBe(false);
     expect(safeReply('Пишіть @someone', config)).toBe(false);
-    expect(introduction(config)).toContain('автоматизований');
+    expect(introduction(config)).toContain('помічник');
+  });
+});
+describe('economical execution', () => {
+  it('does not regenerate the same dry-run answer, even after state reload or switching to live', async () => {
+    const s = setup('contacted');
+    s.transport.inbox = async () => [
+      {
+        id: 11,
+        text: 'Чи можна змінити команди після початку матчу?',
+        direction: 'in',
+        at: now.toISOString(),
+      },
+    ];
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      await cycle(s.state, { ...config, mode: 'dry-run' }, s.transport, s.model, s.save, now);
+      await cycle(
+        s.state,
+        { ...config, mode: 'dry-run' },
+        s.transport,
+        s.model,
+        s.save,
+        new Date(now.getTime() + 600_000),
+      );
+      const reloaded = JSON.parse(JSON.stringify(s.state));
+      await cycle(
+        reloaded,
+        config,
+        s.transport,
+        s.model,
+        s.save,
+        new Date(now.getTime() + 900_000),
+      );
+      expect(s.model.respond).toHaveBeenCalledTimes(1);
+      expect(log).toHaveBeenCalledTimes(1);
+      expect(s.transport.send).toHaveBeenCalledTimes(1);
+    } finally {
+      log.mockRestore();
+    }
+  });
+  it('uses templates without spending a model request after the token budget is exhausted', async () => {
+    const s = setup('contacted');
+    s.state.usage['2030-06-01'] = {
+      messages: 0,
+      initial: 0,
+      modelCalls: 30,
+      inputTokens: 15000,
+      outputTokens: 0,
+    };
+    s.transport.inbox = async () => [
+      { id: 11, text: 'так можна спробувати', direction: 'in', at: now.toISOString() },
+    ];
+    await cycle(s.state, config, s.transport, s.model, s.save, now);
+    expect(s.model.respond).not.toHaveBeenCalled();
+    expect(s.transport.send).toHaveBeenCalledTimes(1);
+  });
+  it('stops new introductions at the pilot limit while preserving reply handling', async () => {
+    const s = setup();
+    s.state.contacts['other'] = {
+      ...contact('contacted'),
+      id: 'other',
+      messages: [{ id: 1, text: 'old intro', direction: 'out', at: now.toISOString() }],
+    };
+    await cycle(s.state, { ...config, maxPilotContacts: 1 }, s.transport, s.model, s.save, now);
+    expect(s.transport.send).not.toHaveBeenCalled();
+  });
+  it('does not repeat the same template call to action after another short assent', async () => {
+    const s = setup('contacted');
+    let inbound = 11;
+    s.transport.inbox = async () => [
+      { id: inbound, text: 'так можна спробувати', direction: 'in', at: now.toISOString() },
+    ];
+    await cycle(s.state, config, s.transport, s.model, s.save, now);
+    inbound = 12;
+    await cycle(s.state, config, s.transport, s.model, s.save, new Date(now.getTime() + 600_000));
+    expect(s.transport.send).toHaveBeenCalledTimes(1);
+    expect(s.state.contacts['123']?.handledInboundId).toBe(12);
+  });
+  it('does not report old unmeasured usage as zero-cost activity', () => {
+    vi.stubEnv('OUTREACH_INPUT_USD_PER_MILLION', '1');
+    vi.stubEnv('OUTREACH_OUTPUT_USD_PER_MILLION', '2');
+    try {
+      const s = setup();
+      s.state.usage['2030-06-01'] = { messages: 1, initial: 1, modelCalls: 4 };
+      expect(report(s.state).estimatedCostUsd).toBeNull();
+      expect(report(s.state).unreportedUsageCallsTotal).toBe(4);
+      s.state.usage['2030-06-01'] = {
+        messages: 1,
+        initial: 1,
+        modelCalls: 4,
+        inputTokens: 1000,
+        outputTokens: 200,
+        unreportedUsageCalls: 0,
+      };
+      expect(report(s.state).estimatedCostUsd).toBeCloseTo(0.0014);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+  it('records actual provider tokens before validating an incomplete paid response', async () => {
+    vi.stubEnv('OPENAI_API_KEY', 'test');
+    vi.stubEnv('OPENAI_MODEL', 'test');
+    const sink = vi.fn(async () => {});
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({
+          status: 'incomplete',
+          usage: { input_tokens: 120, output_tokens: 30 },
+        }),
+      })),
+    );
+    try {
+      await expect(structured(Decision, decisionSchema, 'test', {}, sink)).rejects.toThrow(
+        'incomplete',
+      );
+      expect(sink).toHaveBeenCalledWith({ inputTokens: 120, outputTokens: 30 });
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 });
 describe('candidate qualification', () => {
@@ -212,7 +338,7 @@ describe('candidate qualification', () => {
     s.transport.posts = async () =>
       [1, 2].map((id) => ({
         id,
-        text: 'Футбол Київ',
+        text: 'Організовую футбол Київ',
         at: now.toISOString(),
         author: { id: String(id), username: '@organizer' },
       }));

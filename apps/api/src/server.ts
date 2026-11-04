@@ -1,4 +1,6 @@
 import Fastify from 'fastify';
+import { prisma } from '@app/db';
+import { registerOutreachMetrics } from './integrations/outreach-metrics.js';
 import { env } from './env.js';
 import cors from '@fastify/cors';
 import { fastifyTRPCPlugin } from '@trpc/server/adapters/fastify';
@@ -39,6 +41,8 @@ export function buildServer() {
         .send(panelHtml);
     });
   }
+
+  registerOutreachMetrics(app, prisma);
 
   app.get('/health', async () => ({ status: 'ok' }));
 

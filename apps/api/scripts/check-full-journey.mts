@@ -25,6 +25,9 @@ process.env.JWT_EXPIRES_IN = '1h';
 process.env.NODE_ENV = 'test';
 process.env.TELEGRAM_BOT_TOKEN = '';
 process.env.TELEGRAM_CHAT_ID = '';
+process.env.OUTREACH_METRICS_TOKEN = 'local-outreach-metrics-capability-only';
+process.env.OUTREACH_CAMPAIGN_PREFIX = 'organizers_pilot';
+const outreachCampaign = 'organizers_pilot__0123456789abcdef';
 for (const key of [
   'S3_BUCKET',
   'S3_ENDPOINT',
@@ -140,7 +143,14 @@ let ownsFixtures = false;
 let actorsCreated = 0;
 async function register(label: string): Promise<Actor> {
   const email = `${label}-${suffix}`;
-  const result = await guest.auth.register.mutate({ name: label, email, password });
+  const result = await guest.auth.register.mutate({
+    name: label,
+    email,
+    password,
+    attribution: ['organizer', 'player1', 'player2'].includes(label)
+      ? { source: 'telegram', medium: 'outreach', campaign: outreachCampaign }
+      : undefined,
+  });
   actorsCreated++;
   privateValues.push(result.token);
   assert.equal(result.user.role, 'PLAYER');
@@ -492,6 +502,35 @@ try {
     );
   });
   await check(
+    'Observe real outreach registrations, group joins and finished/repeat games without identities',
+    async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/internal/outreach/metrics',
+        headers: { authorization: `Bearer ${process.env.OUTREACH_METRICS_TOKEN}` },
+        payload: { campaign: outreachCampaign },
+      });
+      httpRequests++;
+      assert.equal(response.statusCode, 200);
+      assert.deepEqual(response.json(), {
+        registeredUsers: 3,
+        organizers: 1,
+        gamesCreated: 2,
+        gamesFinished: 1,
+        playersJoined: 8,
+        newPlayersJoined: 1,
+        playersAttended: 8,
+        organizersWithRepeatGames: 1,
+        organizersWithRepeatFinishedGames: 0,
+      });
+      const me = await organizer.api.auth.me.query();
+      assert.equal(me.user.outreachCampaign, outreachCampaign);
+      assert.equal((await players[2]!.api.auth.me.query()).user.outreachCampaign, null);
+      const publicProfile = await guest.players.profile.query({ userId: organizer.id });
+      assert.equal('outreachCampaign' in publicProfile, false);
+    },
+  );
+  await check(
     'Peer ratings, self/outsider/duplicate guards, atomic batches and zero-star skip',
     async () => {
       const targets = await players[0]!.api.ratings.rateableTargets.query({ eventId });
@@ -720,7 +759,8 @@ try {
     steps,
   };
   await writeFile(
-    new URL('../../../docs/FULL_JOURNEY_RESULT.json', import.meta.url),
+    process.env.JOURNEY_REPORT_PATH ??
+      new URL('../../../docs/FULL_JOURNEY_RESULT.json', import.meta.url),
     JSON.stringify(report, null, 2) + '\n',
   );
   await prisma.$disconnect();

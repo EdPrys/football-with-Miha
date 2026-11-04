@@ -4,18 +4,29 @@ import { useState } from 'react';
 import { Share2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { sharedGameUrl, playerInvitation } from '@/lib/game-sharing';
 
-export function ShareGame({ eventId, venue }: { eventId: string; venue: string }) {
+export function ShareGame({
+  eventId,
+  venue,
+  organizer = false,
+  campaign,
+}: {
+  eventId: string;
+  venue: string;
+  organizer?: boolean;
+  campaign?: string | null;
+}) {
   const [manualUrl, setManualUrl] = useState('');
   const share = async () => {
-    const url = new URL(`/events/${encodeURIComponent(eventId)}`, window.location.origin).href;
+    const url = sharedGameUrl(window.location.origin, eventId, campaign);
+    const invitation = playerInvitation(url);
     if (navigator.share) {
       try {
         await navigator.share({
           title: `Футбол · ${venue}`,
-          text: 'Приєднуйся до гри в Kopanka!',
-          url,
+          text: organizer ? invitation : 'Приєднуйся до гри в Kopanka!',
+          ...(!organizer ? { url } : {}),
         });
         return;
       } catch (error) {
@@ -23,10 +34,14 @@ export function ShareGame({ eventId, venue }: { eventId: string; venue: string }
       }
     }
     try {
-      await navigator.clipboard.writeText(url);
-      toast.success('Посилання скопійовано — надішли його другу');
+      await navigator.clipboard.writeText(organizer ? invitation : url);
+      toast.success(
+        organizer
+          ? 'Запрошення скопійовано — надішли його у свою групу'
+          : 'Посилання скопійовано — надішли його другу',
+      );
     } catch {
-      setManualUrl(url);
+      setManualUrl(organizer ? invitation : url);
       toast('Скопіюй посилання нижче');
     }
   };
@@ -34,14 +49,16 @@ export function ShareGame({ eventId, venue }: { eventId: string; venue: string }
     <div className="order-2 space-y-2">
       <Button variant="outline" className="w-full gap-2" onClick={share}>
         <Share2 className="size-4" />
-        Запросити друга
+        {organizer ? 'Запросити свою групу' : 'Запросити друга'}
       </Button>
       {manualUrl && (
-        <Input
-          aria-label="Посилання на гру"
+        <textarea
+          aria-label={organizer ? 'Запрошення для групи' : 'Посилання на гру'}
           readOnly
+          rows={organizer ? 4 : 2}
           value={manualUrl}
           onFocus={(e) => e.target.select()}
+          className="w-full min-w-0 rounded-lg border border-input bg-background p-3 text-base md:text-sm"
         />
       )}
     </div>

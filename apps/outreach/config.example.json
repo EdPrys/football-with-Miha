@@ -4,10 +4,13 @@
   "sources": [],
   "siteUrl": "https://kopanka.pro",
   "campaign": "organizers_pilot",
+  "maxPilotContacts": 10,
   "maxNewContactsPerDay": 3,
   "maxMessagesPerDay": 15,
   "minSendIntervalSeconds": 300,
   "maxModelCallsPerDay": 30,
+  "maxTokensPerDay": 15000,
+  "maxModelRepliesPerContact": 3,
   "pollSeconds": 60,
   "sourceMessageLimit": 30
 }

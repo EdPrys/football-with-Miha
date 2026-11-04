@@ -82,3 +82,11 @@ Production-сервіси мають явно відстежувати `main`; G
 frontend, API/domain тести та ізольований PostgreSQL-сценарій. Див.
 [DEVELOPMENT.md](DEVELOPMENT.md). Workflow не змінює налаштування Railway
 і не створює staging; його branch, деплой-тригери й результат треба перевірити окремо.
+
+## Опційна статистика агента
+
+`OUTREACH_METRICS_TOKEN` (окремий випадковий секрет 32+ символи) в API вмикає
+read-only лічильники кампанії. Без нього маршрут відсутній. Префікс
+`OUTREACH_CAMPAIGN_PREFIX` має збігатися з campaign конфігурації агента.
+Ці налаштування та окремий worker ще не ввімкнені в production. Деталі:
+[OUTREACH_AGENT.md](OUTREACH_AGENT.md). Змін схеми/міграцій для лічильників немає.

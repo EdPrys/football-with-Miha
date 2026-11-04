@@ -5,6 +5,7 @@ import { transitionContact } from '@app/domain/outreach';
 import { Store } from './state.js';
 import { cycle, discover, report } from './engine.js';
 import { introduction, model } from './model.js';
+import { syncMetrics } from './metrics.js';
 
 const dir = resolve(process.env.OUTREACH_DATA_DIR ?? '.outreach');
 const store = new Store(dir);
@@ -50,6 +51,13 @@ async function main() {
       );
       return;
     }
+    if (command === 'sync-metrics') {
+      const connected = await syncMetrics(state, (s) => store.save(s));
+      console.log(
+        connected ? 'Aggregate metrics updated' : 'Metrics URL/token MISSING; no request made',
+      );
+      return;
+    }
     if (command === 'report') {
       console.log(JSON.stringify(report(state), null, 2));
       return;
@@ -61,6 +69,8 @@ async function main() {
             id: c.id,
             username: c.username,
             source: c.source,
+            priority: c.priority ?? 1,
+            campaign: c.campaign,
             evidence: c.evidence,
             status: c.status,
             note: c.note,
@@ -114,7 +124,7 @@ async function main() {
       return;
     }
     if (command === 'preview') {
-      console.log(introduction(config));
+      console.log(introduction(config, id ? state.contacts[id] : undefined));
       return;
     }
     if (command === 'connect') {
@@ -124,7 +134,7 @@ async function main() {
     }
     if (!['discover', 'run'].includes(command ?? ''))
       throw new Error(
-        'Commands: init, demo, check, discover, leads, preview, approve ID, decline ID, run [--once], pause, resume, report, activate ID EVENT_URL, resolve-send ID NOTE, connect',
+        'Commands: init, demo, check, discover, leads, preview, approve ID, decline ID, run [--once], pause, resume, report, activate ID EVENT_URL, resolve-send ID NOTE, connect, sync-metrics',
       );
     if (!config.city || !config.sources.length)
       throw new Error('Configure pilot city and source groups first');
@@ -141,6 +151,13 @@ async function main() {
       for (;;) {
         await cycle(state, config, connection.transport, model, (s) => store.save(s));
         if (Date.now() - lastDiscovery > 3600_000) {
+          try {
+            await syncMetrics(state, (s) => store.save(s));
+          } catch {
+            console.error(
+              'Metrics unavailable; previous observations stay marked with their timestamp',
+            );
+          }
           await discover(state, config, connection.transport, model, (s) => store.save(s));
           lastDiscovery = Date.now();
         }
