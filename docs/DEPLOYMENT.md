@@ -74,3 +74,11 @@ node -e 'fetch("http://127.0.0.1:4000/health").then(async r => console.log(r.sta
   у frontend bundle та HTTPS. Налаштування CORS не виправляє недоступний контейнер.
 - **404 на `/api-panel`:** перевірте NODE_ENV та API_PANEL_ENABLED саме в API,
   не у Web/Admin; після зміни потрібен restart.
+
+## Гілки та CI
+
+Production-сервіси мають явно відстежувати `main`; GitHub default branch — `dev`.
+Задачі йдуть через PR у `dev`, релізи — PR `dev → main`. CI перевіряє обидва
+frontend, API/domain тести та ізольований PostgreSQL-сценарій. Див.
+[DEVELOPMENT.md](DEVELOPMENT.md). Workflow не змінює налаштування Coolify
+і не створює staging; його branch, деплой-тригери й результат треба перевірити окремо.

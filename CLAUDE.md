@@ -103,3 +103,9 @@ expose private reminder flags in public event participants. `.ics` export is a
 snapshot without automatic calendar updates. Browser drafts are account/source
 scoped, never persist passwords. See docs/PLAYER_COMFORT.md and USABILITY_TEST.md;
 real-user/visual testing has not been completed.
+
+## Branches and releases
+
+Read `AGENTS.md` and `docs/DEVELOPMENT.md`. Tasks branch from `dev` and merge
+through PRs into `dev`; releases go `dev → main` using a merge commit, then
+`main → dev` for history synchronization. Never push directly to protected branches.
