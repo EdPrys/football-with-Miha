@@ -18,7 +18,9 @@ export const Config = z
       .regex(/^[a-z0-9_]+$/),
     maxTokensPerDay: z.number().int().min(1000).max(1000000).default(15000),
     maxModelRepliesPerContact: z.number().int().min(1).max(10).default(3),
-    maxPilotContacts: z.number().int().min(1).max(100).default(10),
+    maxPilotContacts: z.number().int().min(1).max(10).default(10),
+    maxActiveConversations: z.number().int().min(1).max(7).default(7),
+    idleConversationHours: z.number().int().min(1).max(168).default(48),
     maxNewContactsPerDay: z.number().int().min(0).max(10),
     maxMessagesPerDay: z.number().int().min(1).max(50),
     minSendIntervalSeconds: z.number().int().min(60),
@@ -45,6 +47,7 @@ const Contact = z.object({
     'approved',
     'contacted',
     'interested',
+    'waiting',
     'handoff',
     'declined',
     'activated',
@@ -57,6 +60,11 @@ const Contact = z.object({
   note: z.string().optional(),
   verifiedEventUrl: z.string().optional(),
   campaign: z.string().optional(),
+  pilotId: z.number().int().positive().optional(),
+  waitingSince: z.string().optional(),
+  result: z
+    .enum(['activated', 'declined', 'waiting', 'owner_help', 'conversation_closed'])
+    .optional(),
   priority: z.number().int().optional(),
   modelReplies: z.number().int().optional(),
   prepared: z
@@ -85,7 +93,35 @@ const Contact = z.object({
     .optional(),
 });
 export type Contact = z.infer<typeof Contact>;
+export const Pilot = z.object({
+  id: z.number().int().positive(),
+  status: z.enum(['running', 'draining', 'awaiting_review']),
+  startedAt: z.string(),
+  completedAt: z.string().optional(),
+  contactIds: z.array(z.string()),
+  limit: z.number().int().min(1).max(10),
+  concurrency: z.number().int().min(1).max(7),
+  idleHours: z.number().int().min(1),
+  usageBaseline: z.record(z.number()),
+  reviewedAt: z.string().optional(),
+  reviewNotes: z.string().optional(),
+});
+export type Pilot = z.infer<typeof Pilot>;
 export const State = z.object({
+  pilot: Pilot.optional(),
+  pilotHistory: z
+    .array(
+      z.object({
+        id: z.number().int().positive(),
+        completedAt: z.string(),
+        report: z.record(z.unknown()),
+        markdown: z.string().optional(),
+        reviewedAt: z.string().optional(),
+        reviewNotes: z.string().optional(),
+        nextPilotStartedAt: z.string().optional(),
+      }),
+    )
+    .optional(),
   version: z.literal(1),
   contacts: z.record(Contact),
   seen: z.array(z.string()),
@@ -122,6 +158,30 @@ export class Store {
     const path = join(this.dir, 'state.json');
     await writeFile(path + '.tmp', JSON.stringify(State.parse(state), null, 2), { mode: 0o600 });
     await rename(path + '.tmp', path);
+    for (const archived of state.pilotHistory ?? []) {
+      const reportDir = join(this.dir, 'reports');
+      await mkdir(reportDir, { recursive: true, mode: 0o700 });
+      try {
+        await writeFile(
+          join(reportDir, `pilot-${String(archived.id).padStart(4, '0')}.json`),
+          JSON.stringify(archived.report, null, 2),
+          { mode: 0o600, flag: 'wx' },
+        );
+      } catch (e) {
+        if ((e as NodeJS.ErrnoException).code !== 'EEXIST') throw e;
+      }
+      if (archived.markdown) {
+        try {
+          await writeFile(
+            join(reportDir, `pilot-${String(archived.id).padStart(4, '0')}.md`),
+            archived.markdown,
+            { mode: 0o600, flag: 'wx' },
+          );
+        } catch (e) {
+          if ((e as NodeJS.ErrnoException).code !== 'EEXIST') throw e;
+        }
+      }
+    }
   }
   async lock() {
     await mkdir(this.dir, { recursive: true, mode: 0o700 });

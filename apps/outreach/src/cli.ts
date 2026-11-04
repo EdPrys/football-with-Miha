@@ -5,6 +5,14 @@ import { transitionContact } from '@app/domain/outreach';
 import { Store } from './state.js';
 import { cycle, discover, report } from './engine.js';
 import { introduction, model } from './model.js';
+import {
+  ensurePilot,
+  finishPilotIfReady,
+  pilotReport,
+  renderPilotReport,
+  reviewPilot,
+  startNextPilot,
+} from './pilot.js';
 import { syncMetrics } from './metrics.js';
 
 const dir = resolve(process.env.OUTREACH_DATA_DIR ?? '.outreach');
@@ -51,6 +59,30 @@ async function main() {
       );
       return;
     }
+    if (command === 'pilot-report') {
+      const pilotId = id && /^\d+$/.test(id) ? Number(id) : state.pilot?.id;
+      const archived = state.pilotHistory?.find((p) => p.id === pilotId);
+      if (id && /^\d+$/.test(id) && !archived && pilotId !== state.pilot?.id)
+        throw new Error('Unknown pilot ID');
+      if (id === '--json' || args.includes('--json'))
+        console.log(JSON.stringify(archived ?? { report: pilotReport(state) }, null, 2));
+      else console.log(archived?.markdown ?? renderPilotReport(pilotReport(state)));
+      return;
+    }
+    if (command === 'review-pilot') {
+      reviewPilot(state, [id, ...args].filter(Boolean).join(' '));
+      await store.save(state);
+      console.log('Review recorded; next pilot remains stopped until start-next-pilot.');
+      return;
+    }
+    if (command === 'start-next-pilot') {
+      startNextPilot(state, config);
+      await store.save(state);
+      console.log(
+        `Pilot ${state.pilot!.id} prepared; daily quotas and opt-outs retained. Start run explicitly when ready.`,
+      );
+      return;
+    }
     if (command === 'sync-metrics') {
       const connected = await syncMetrics(state, (s) => store.save(s));
       console.log(
@@ -82,7 +114,7 @@ async function main() {
       );
       return;
     }
-    if (['approve', 'decline', 'activate', 'resolve-send'].includes(command ?? '')) {
+    if (['approve', 'decline', 'activate', 'handoff', 'resolve-send'].includes(command ?? '')) {
       const contact = id ? state.contacts[id] : undefined;
       if (!contact) throw new Error('Unknown contact ID');
       if (command === 'resolve-send') {
@@ -90,6 +122,7 @@ async function main() {
         // Do not guess delivery and do not automatically retry; hand the conversation to owner.
         contact.pendingSend = undefined;
         contact.status = transitionContact(contact.status, 'handoff');
+        contact.result = 'owner_help';
         contact.note = args.join(' ') || 'Owner must verify actual chat before continuing';
       } else {
         if (command === 'activate') {
@@ -103,9 +136,25 @@ async function main() {
         }
         contact.status = transitionContact(
           contact.status,
-          command === 'approve' ? 'approved' : command === 'activate' ? 'activated' : 'declined',
+          command === 'approve'
+            ? 'approved'
+            : command === 'activate'
+              ? 'activated'
+              : command === 'handoff'
+                ? 'handoff'
+                : 'declined',
         );
       }
+      if (command === 'activate') contact.result = 'activated';
+      if (command === 'decline') {
+        contact.result = 'declined';
+        contact.note = args.join(' ') || 'Declined by owner';
+      }
+      if (command === 'handoff') {
+        contact.result = 'owner_help';
+        contact.note = args.join(' ') || 'Owner assistance required';
+      }
+      finishPilotIfReady(state, new Date());
       await store.save(state);
       console.log('Contact updated.');
       return;
@@ -116,6 +165,16 @@ async function main() {
       return;
     }
     if (command === 'resume') {
+      if (state.pilot?.status === 'awaiting_review') {
+        if (Object.values(state.contacts).some((c) => c.pendingSend))
+          throw new Error('Resolve uncertain sends first');
+        state.paused = undefined;
+        await store.save(state);
+        console.log(
+          'Technical pause cleared; pilot still awaits review and start-next-pilot. No sending enabled.',
+        );
+        return;
+      }
       if (Object.values(state.contacts).some((c) => c.pendingSend))
         throw new Error('Resolve uncertain sends first');
       state.paused = undefined;
@@ -134,8 +193,17 @@ async function main() {
     }
     if (!['discover', 'run'].includes(command ?? ''))
       throw new Error(
-        'Commands: init, demo, check, discover, leads, preview, approve ID, decline ID, run [--once], pause, resume, report, activate ID EVENT_URL, resolve-send ID NOTE, connect, sync-metrics',
+        'Commands: init, demo, check, discover, leads, preview, approve ID, decline ID, run [--once], pause, resume, report, activate ID EVENT_URL, resolve-send ID NOTE, connect, sync-metrics, pilot-report, review-pilot NOTES, start-next-pilot, handoff ID NOTE',
       );
+    if (command === 'run') {
+      ensurePilot(state, config, new Date());
+      await store.save(state);
+      if (state.pilot?.status === 'awaiting_review') {
+        console.log(renderPilotReport(pilotReport(state)));
+        return;
+      }
+      if (state.paused) throw new Error('Agent paused; resolve the recorded issue before resuming');
+    }
     if (!config.city || !config.sources.length)
       throw new Error('Configure pilot city and source groups first');
     if (!process.env.OPENAI_API_KEY || !process.env.OPENAI_MODEL)
@@ -150,6 +218,10 @@ async function main() {
       let lastDiscovery = 0;
       for (;;) {
         await cycle(state, config, connection.transport, model, (s) => store.save(s));
+        if (state.pilot?.status === 'awaiting_review') {
+          console.log(JSON.stringify(report(state), null, 2));
+          return;
+        }
         if (Date.now() - lastDiscovery > 3600_000) {
           try {
             await syncMetrics(state, (s) => store.save(s));
