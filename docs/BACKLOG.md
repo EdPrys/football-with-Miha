@@ -45,8 +45,8 @@ Production deployment and delivery remain separately unverified.
   are implemented. Do not treat the former timezone task as missing code.
 - Verify GA4/Meta events and UTM registration attribution end to end before advertising.
   See `MARKETING_PILOT.md`; no campaign launch is recorded there.
-- Confirm actual service ports, domains and health in the intended Coolify deployment;
-  the reported 502 needs runtime/container logs. See `DEPLOYMENT.md`.
+- Confirm actual service ports, domains and health in the Railway deployment;
+  investigate any 502 using Railway deployment/runtime logs. See `DEPLOYMENT.md`.
 - Smoke-test the complete two-player flow against a dedicated test database.
 
 ## Product decisions
