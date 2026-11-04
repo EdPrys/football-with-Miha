@@ -2,28 +2,26 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import {
-  Compass,
-  CalendarCheck,
-  PlusCircle,
-  User,
-  Moon,
-  Sun,
-  Bell,
-  CircleHelp,
-} from 'lucide-react';
+import { Moon, Sun, CircleHelp } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import { trpc } from '@/lib/trpc';
 import { Logo } from '@/components/logo';
+import {
+  FindGameIcon,
+  MyGamesIcon,
+  CreateGameIcon,
+  NotificationsIcon,
+  PlayerProfileIcon,
+} from '@/components/nav-icons';
 
 const tabs = [
-  { href: '/', label: 'Пошук', icon: Compass },
-  { href: '/my', label: 'Мої ігри', icon: CalendarCheck },
-  { href: '/events/new', label: 'Створити', icon: PlusCircle },
-  { href: '/notifications', label: 'Сповіщення', icon: Bell },
-  { href: '/profile', label: 'Профіль', icon: User },
+  { href: '/', label: 'Пошук', icon: FindGameIcon },
+  { href: '/my', label: 'Мої ігри', icon: MyGamesIcon },
+  { href: '/events/new', label: 'Створити', icon: CreateGameIcon },
+  { href: '/notifications', label: 'Сповіщення', icon: NotificationsIcon },
+  { href: '/profile', label: 'Профіль', icon: PlayerProfileIcon },
 ];
 
 function ThemeToggle() {
@@ -97,7 +95,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                   )}
                 >
                   <span className="relative">
-                    <Icon className="size-4" />
+                    <Icon className="size-5" active={active} />
                     {t.href === '/notifications' && unreadCount > 0 && (
                       <UnreadBadge count={unreadCount} />
                     )}
@@ -153,7 +151,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 )}
               >
                 <span className="relative">
-                  <Icon className="size-5" />
+                  <Icon className="size-6" active={active} />
                   {t.href === '/notifications' && unreadCount > 0 && (
                     <UnreadBadge count={unreadCount} />
                   )}
