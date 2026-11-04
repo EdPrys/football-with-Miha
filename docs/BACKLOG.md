@@ -61,3 +61,12 @@ Production deployment and delivery remain separately unverified.
 API explorer and setup/API/architecture/deployment documentation are now in the
 repository. Keep procedure metadata and docs synchronized with implementation.
 No React Native app, payment or external field-booking integration is implemented.
+
+## Co-player profiles (2026-11-04)
+
+Implemented automatic own-profile co-player list from mutual ATTENDED participation
+in FINISHED games, paginated with shared counts, and public `/players/[id]` profile
+with stats, self-assessed skills and played-match links. No schema migration.
+Domain/API regression tests cover identity scoping, pagination and attendance filters.
+Production deployment and phone checks remain unverified; local Docker was unavailable
+for a fresh PostgreSQL integration run.

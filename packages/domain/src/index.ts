@@ -27,3 +27,4 @@ export * from './notifications/subscriptions.js';
 export * from './events/contact.js';
 export * from './events/waitlist.js';
 export * from './events/reminders.js';
+export * from './players/teammates.js';

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import {
   ALL_SKILLS,
+  teammatesFor,
   attendancePercent,
   DomainError,
   MAX_SKILL,
@@ -20,6 +21,14 @@ const skillValues = z.object(
 );
 
 export const playersRouter = router({
+  teammates: protectedProcedure
+    .meta({
+      description:
+        'Bearer token required. Current player’s co-players from finished games where both attended. Paginated, most shared matches first. No private contact data.',
+    })
+    .input(z.object({ page: z.number().int().min(0).max(10000).default(0) }))
+    .query(({ ctx, input }) => teammatesFor(ctx.prisma, ctx.user.id, input.page)),
+
   // Football profile: self-assessed skills, received stars, matches, attendance.
   profile: publicProcedure
     .meta({
@@ -108,7 +117,7 @@ export const playersRouter = router({
     .input(z.object({ userId: z.string().min(1) }))
     .query(async ({ ctx, input }) => {
       const parts = await ctx.prisma.eventParticipant.findMany({
-        where: { userId: input.userId, event: { status: 'FINISHED' } },
+        where: { userId: input.userId, status: 'ATTENDED', event: { status: 'FINISHED' } },
         include: {
           event: { include: { field: { include: { venue: true } } } },
           team: { select: { name: true } },

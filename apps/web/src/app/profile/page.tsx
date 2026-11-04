@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { trpc } from '@/lib/trpc';
 import { clearToken } from '@/lib/auth';
 import { formatDate } from '@/lib/format';
+import { Teammates } from '@/components/teammates';
 import { AvatarEditor } from '@/components/avatar-editor';
 import { BecomeOrganizer } from '@/components/become-organizer';
 import { CitySelect } from '@/components/city-select';
@@ -130,6 +131,8 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
+
+      <Teammates />
     </div>
   );
 }

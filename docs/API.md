@@ -86,7 +86,7 @@ API — tRPC 11 поверх Fastify, вхідні дані перевіряє Z
 | `cities`        | `list`                                             | —                                                                                                                                | Public                                                                                                         |
 | `venues`        | `list`, `get`                                      | `create`, `addField`, `update`, `updateField`                                                                                    | Читання Public; створення Manager; редагування Admin                                                           |
 | `events`        | `list`, `get`, `mine`, `repeatTemplate`, `myState` | `create`, `join`, `leave`, `start`, `finish`, `cancel`, `delete`, `balanceTeams`, `updateContacts`, `setWaitlist`, `setReminder` | list/get Public; mine/join/leave Auth; create Manager; repeatTemplate Manager + Organizer; керування Organizer |
-| `players`       | `profile`, `matchHistory`, `inCity`                | `updateMySkills`                                                                                                                 | profile/history Public; inCity Manager; skills Auth                                                            |
+| `players`       | `profile`, `matchHistory`, `inCity`, `teammates`   | `updateMySkills`                                                                                                                 | profile/history Public; inCity Manager; skills/teammates Auth                                                  |
 | `users`         | `findByEmail`, `list`                              | `updateAvatar`, `updateCity`, `requestOrganizer`, `setRole`                                                                      | list/setRole Admin; решта Auth                                                                                 |
 | `invitations`   | `candidates`, `received`                           | `send`, `sendMany`, `respond`                                                                                                    | Auth + перевірки учасників/стану в domain                                                                      |
 | `ratings`       | `rateableTargets`                                  | `submit`                                                                                                                         | Auth, оцінювати можуть співучасники завершеної гри                                                             |
@@ -198,3 +198,14 @@ URL-encoded `input`, для `mutation` — POST. Браузерні клієнт
   Нагадування й sent marker атомарні; конкурентні scheduler replicas не дублюють доставку.
 - Нові сповіщення мають payload eventId, eventStartAt (ISO). Канал — тільки
   внутрішній, без email/push. Деталі та відтворення перевірок: [PLAYER_COMFORT.md](PLAYER_COMFORT.md).
+
+### З ким грав
+
+`players.teammates({ page: 0 })` — авторизований користувач отримує лише свій
+список партнерів і суперників. Обидва мають статус ATTENDED у спільній FINISHED
+грі. Повертає `items` (id, name, avatarUrl, city.name, sharedMatches, stars) та
+`hasMore`; по 24 гравці на сторінку, сортування за кількістю спільних матчів,
+потім id. Email, контакти та приватні налаштування не повертаються.
+Список обчислюється з історії, без запису дружби й окремої міграції.
+`players.matchHistory` повертає лише ATTENDED-участь у завершених іграх;
+скасовані записи й неявки не є зіграними матчами.
