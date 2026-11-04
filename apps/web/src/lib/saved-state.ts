@@ -72,7 +72,9 @@ const TEXT_FIELDS = [
   'organizerPhone',
   'organizerTelegram',
 ] as const;
-export type GameDraft = Partial<Record<(typeof TEXT_FIELDS)[number], string>>;
+export type GameDraft = Partial<Record<(typeof TEXT_FIELDS)[number], string>> & {
+  paymentRequired?: boolean;
+};
 /** Untrusted/stale browser storage is never spread into API input. */
 export function gameDraft(raw: string | null): GameDraft {
   try {
@@ -81,6 +83,7 @@ export function gameDraft(raw: string | null): GameDraft {
     const draft: GameDraft = {};
     for (const key of TEXT_FIELDS)
       if (typeof data[key] === 'string' && data[key].length <= 2000) draft[key] = data[key];
+    if (typeof data.paymentRequired === 'boolean') draft.paymentRequired = data.paymentRequired;
     return draft;
   } catch {
     return {};
