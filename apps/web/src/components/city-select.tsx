@@ -43,18 +43,18 @@ export function CitySelect({
             id={id}
             aria-label="Місто"
             placeholder={cities.isLoading ? 'Завантажуємо міста…' : 'Знайти місто'}
-            className="h-11 w-full min-w-0 rounded-xl border border-input bg-background px-3 pr-10 text-base text-foreground outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 md:text-sm"
+            className="h-11 w-full min-w-0 rounded-xl border border-input bg-background px-3 pr-11 text-base text-foreground outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 md:text-sm"
           />
           <Combobox.Trigger
             aria-label="Показати міста"
-            className="absolute inset-y-0 right-0 flex w-10 items-center justify-center rounded-r-xl text-muted-foreground focus-visible:outline-2 focus-visible:outline-ring"
+            className="absolute inset-y-0 right-0 flex w-11 items-center justify-center rounded-r-xl text-muted-foreground focus-visible:outline-2 focus-visible:outline-ring"
           >
             <ChevronDown className="size-4" />
           </Combobox.Trigger>
         </div>
         <Combobox.Portal>
           <Combobox.Positioner sideOffset={6} className="z-60">
-            <Combobox.Popup className="max-h-72 w-(--anchor-width) min-w-48 overflow-y-auto rounded-xl border border-border bg-popover p-1 text-popover-foreground shadow-xl outline-none">
+            <Combobox.Popup className="max-h-[min(18rem,var(--available-height))] w-(--anchor-width) overflow-y-auto rounded-xl border border-border bg-popover p-1 text-popover-foreground shadow-xl outline-none">
               <Combobox.Empty className="px-3 py-5 text-center text-sm text-muted-foreground">
                 Місто не знайдено
               </Combobox.Empty>

@@ -61,9 +61,9 @@ export default function ProfilePage() {
 
   return (
     <div className="space-y-5 md:space-y-8">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex flex-col items-center gap-1.5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex shrink-0 flex-col items-center gap-1.5">
             <AvatarEditor
               name={me.data.user.name}
               url={me.data.user.avatarUrl}
@@ -71,8 +71,8 @@ export default function ProfilePage() {
             />
             <StarRow stars={p?.stars} starClassName="size-3" />
           </div>
-          <div>
-            <h1 className="text-2xl font-bold md:text-3xl">{me.data.user.name}</h1>
+          <div className="min-w-0">
+            <h1 className="break-words text-2xl font-bold md:text-3xl">{me.data.user.name}</h1>
             <Badge variant="secondary" className="mt-1">
               {ROLE_LABEL[me.data.user.role] ?? me.data.user.role}
             </Badge>

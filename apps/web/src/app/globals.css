@@ -143,7 +143,7 @@
 }
 
 @layer base {
-  :where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
     outline: 2px solid var(--ring);
     outline-offset: 4px;
   }
@@ -169,7 +169,8 @@
 }
 
 :root:not(.dark) .welcome-hero {
-  background: radial-gradient(ellipse at 100% 0%, #d8ee9d80, transparent 62%),
+  background:
+    radial-gradient(ellipse at 100% 0%, #d8ee9d80, transparent 62%),
     linear-gradient(120deg, #ffffff 20%, #f0f5e6);
   border-color: #d4dfc4;
   box-shadow: var(--daylight-shadow);
@@ -196,7 +197,9 @@
 
 :root:not(.dark) .event-card:hover {
   border-color: #8ba46a;
-  box-shadow: 0 6px 12px -8px #172b241a, 0 18px 36px -20px #172b2440;
+  box-shadow:
+    0 6px 12px -8px #172b241a,
+    0 18px 36px -20px #172b2440;
 }
 
 :root:not(.dark) .event-format {
@@ -216,4 +219,43 @@
 :root:not(.dark) .app-bottom-nav a[aria-current='page'] {
   background: #edf4da;
   color: #31552c;
+}
+
+/* Keep content clear of display cutouts, including landscape phones. */
+body {
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+.app-header {
+  padding-top: env(safe-area-inset-top);
+}
+
+/* Touch devices include tablets at desktop breakpoints. Keep form text large
+   enough to avoid focus zoom on iOS and provide comfortable touch targets. */
+@media (pointer: coarse) {
+  [data-slot='button'],
+  [data-slot='select-trigger'],
+  input:not([type='checkbox']):not([type='radio']):not([type='range']),
+  select {
+    min-height: 44px;
+  }
+  [data-slot='button'] {
+    min-width: 44px;
+  }
+  input:not([type='checkbox']):not([type='radio']):not([type='range']),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

@@ -18,7 +18,6 @@ export default function RatePage() {
   const { id } = useParams<{ id: string }>();
   const me = trpc.auth.me.useQuery(undefined, { retry: false });
   const targets = trpc.ratings.rateableTargets.useQuery({ eventId: id }, { enabled: !!me.data });
-  const [skipped, setSkipped] = useState<string[]>([]);
 
   if (me.isLoading || targets.isLoading) return <Skeleton className="h-72 w-full rounded-xl" />;
 
@@ -90,13 +89,16 @@ function RatingList({
       {players.map((p) => {
         const value = stars[p.userId] ?? 0;
         return (
-          <div key={p.userId} className="flex items-center gap-3 rounded-lg p-2">
+          <div
+            key={p.userId}
+            className="grid grid-cols-[2.5rem_minmax(0,1fr)] items-center gap-x-3 gap-y-1 rounded-lg p-2 sm:flex"
+          >
             <PlayerAvatar name={p.name} url={p.avatarUrl} className="size-10 shrink-0" />
             <p className="min-w-0 flex-1 truncate font-medium">{p.name}</p>
             <StarRating
               value={value}
               onChange={(v) => setStars((s) => ({ ...s, [p.userId]: v === value ? 0 : v }))}
-              className="gap-0.5"
+              className="col-span-2 justify-center gap-0.5"
               starClassName="size-6"
             />
           </div>
