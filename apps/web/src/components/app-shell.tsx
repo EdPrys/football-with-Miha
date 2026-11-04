@@ -124,14 +124,14 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <main
         id="main-content"
-        className="mx-auto w-full max-w-md flex-1 px-4 pb-[calc(6rem+env(safe-area-inset-bottom))] pt-5 md:max-w-6xl md:px-6 md:pb-12 md:pt-8"
+        className="mx-auto w-full min-w-0 max-w-md flex-1 px-4 pb-[calc(6rem+env(safe-area-inset-bottom))] pt-5 [overflow-wrap:anywhere] md:max-w-6xl md:px-6 md:pb-12 md:pt-8"
       >
         {children}
       </main>
 
       <nav
         aria-label="Основна навігація"
-        className="app-bottom-nav fixed inset-x-0 bottom-0 z-20 border-t bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
+        className="app-bottom-nav fixed bottom-0 left-[env(safe-area-inset-left)] right-[env(safe-area-inset-right)] z-20 border-t bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
       >
         <div className="mx-auto grid max-w-md grid-cols-5">
           {tabs.map((t) => {

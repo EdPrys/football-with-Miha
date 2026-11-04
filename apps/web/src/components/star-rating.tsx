@@ -19,7 +19,14 @@ export function StarRating({
   return (
     <div className={cn('flex gap-1.5', className)}>
       {Array.from({ length: max }, (_, i) => i + 1).map((n) => (
-        <button key={n} type="button" onClick={() => onChange(n)} aria-label={`Оцінка ${n}`}>
+        <button
+          key={n}
+          type="button"
+          onClick={() => onChange(n)}
+          aria-label={`Оцінка ${n}`}
+          aria-pressed={n === value}
+          className="flex size-11 shrink-0 items-center justify-center rounded-lg"
+        >
           <Star
             className={cn(
               'size-8 transition-colors',

@@ -46,7 +46,10 @@ function UsersPageContent() {
         {users.data?.map((u) => {
           const self = u.id === me.data?.user.id;
           return (
-            <Card key={u.id} className="flex flex-row items-center justify-between gap-3 p-3">
+            <Card
+              key={u.id}
+              className="flex flex-col items-stretch gap-3 p-3 sm:flex-row sm:items-center sm:justify-between"
+            >
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium">
                   {u.name} {self && <span className="text-muted-foreground">(ти)</span>}
@@ -59,7 +62,10 @@ function UsersPageContent() {
                   onValueChange={(role) => role && setRole.mutate({ userId: u.id, role })}
                   disabled={self || setRole.isPending}
                 >
-                  <SelectTrigger className="h-8 w-36 text-xs">
+                  <SelectTrigger
+                    aria-label={`Роль користувача ${u.name}`}
+                    className="w-full sm:w-36"
+                  >
                     <SelectValue>{(role: string) => ROLE_LABEL[role] ?? role}</SelectValue>
                   </SelectTrigger>
                   <SelectContent>
