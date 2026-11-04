@@ -66,7 +66,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       >
         Перейти до вмісту
       </a>
-      <header className="sticky top-0 z-20 border-b bg-background/95 backdrop-blur">
+      <header className="app-header sticky top-0 z-20 border-b bg-background/95 backdrop-blur">
         <div className="mx-auto flex h-14 max-w-md items-center justify-between px-4 md:h-16 md:max-w-6xl md:px-6">
           <Link
             href="/"
@@ -133,7 +133,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <nav
         aria-label="Основна навігація"
-        className="fixed inset-x-0 bottom-0 z-20 border-t bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
+        className="app-bottom-nav fixed inset-x-0 bottom-0 z-20 border-t bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
       >
         <div className="mx-auto grid max-w-md grid-cols-5">
           {tabs.map((t) => {

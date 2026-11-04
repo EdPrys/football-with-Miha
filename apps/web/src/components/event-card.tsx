@@ -36,7 +36,7 @@ export function EventCard({ event: e }: { event: DiscoverEvent }) {
   return (
     <Link
       href={`/events/${e.id}`}
-      className="group flex h-full flex-col rounded-2xl border border-border bg-card p-5 text-card-foreground transition duration-200 hover:border-primary/60 motion-safe:hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
+      className="event-card group flex h-full flex-col rounded-2xl border border-border bg-card p-5 text-card-foreground transition duration-200 hover:border-primary/60 motion-safe:hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
     >
       <div className="flex items-start justify-between gap-3">
         <div>
@@ -50,7 +50,7 @@ export function EventCard({ event: e }: { event: DiscoverEvent }) {
             до {formatTime(e.endAt)}
           </p>
         </div>
-        <span className="rounded-lg bg-secondary px-2.5 py-1.5 text-sm font-semibold tabular-nums">
+        <span className="event-format rounded-lg bg-secondary px-2.5 py-1.5 text-sm font-semibold tabular-nums">
           {e.playersPerTeam} × {e.playersPerTeam}
         </span>
       </div>

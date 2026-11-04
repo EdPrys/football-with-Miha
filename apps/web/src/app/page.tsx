@@ -132,7 +132,7 @@ function DiscoverGames() {
               aria-pressed={filter === f.value}
               onClick={() => chooseFilter(f.value)}
               className={cn(
-                'min-h-11 rounded-full border px-4 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
+                'date-filter min-h-11 rounded-full border px-4 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
                 filter === f.value
                   ? 'border-primary bg-primary text-primary-foreground'
                   : 'border-border bg-card text-muted-foreground hover:border-primary/50 hover:text-foreground',

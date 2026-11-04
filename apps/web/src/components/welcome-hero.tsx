@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 // A short introduction keeps real games close to the first screen.
 export function WelcomeHero() {
   return (
-    <section className="relative isolate overflow-hidden rounded-3xl border border-border bg-card px-6 py-7 md:px-10 md:py-10">
+    <section className="welcome-hero relative isolate overflow-hidden rounded-3xl border border-border bg-card px-6 py-7 md:px-10 md:py-10">
       <div
         aria-hidden="true"
         className="pointer-events-none absolute -right-16 -top-16 -z-10 size-72 rounded-full border-[32px] border-primary/5 md:right-8 md:size-96"
