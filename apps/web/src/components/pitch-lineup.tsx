@@ -30,7 +30,12 @@ const TEAM_TEXT = [
   'text-amber-700 dark:text-amber-300',
   'text-fuchsia-700 dark:text-fuchsia-300',
 ];
-const TEAM_DOT = ['bg-emerald-300', 'bg-sky-300', 'bg-amber-300', 'bg-fuchsia-300'];
+const TEAM_DOT = [
+  'after:bg-emerald-300',
+  'after:bg-sky-300',
+  'after:bg-amber-300',
+  'after:bg-fuchsia-300',
+];
 
 export type JoinPosition = 'GK' | 'MID';
 
@@ -86,7 +91,12 @@ export function PitchLineup({
   const scrollToIndex = (i: number) => {
     const el = scrollRef.current;
     if (!el) return;
-    el.scrollTo({ left: i * el.clientWidth, behavior: 'smooth' });
+    el.scrollTo({
+      left: i * el.clientWidth,
+      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches
+        ? 'instant'
+        : 'smooth',
+    });
   };
 
   type Cell = { kind: 'player'; p: Participant } | { kind: 'empty'; key: string };
@@ -201,30 +211,31 @@ export function PitchLineup({
           onClick={() => scrollToIndex(Math.max(0, active - 1))}
           disabled={active === 0}
           aria-label="Попередня команда"
-          className="flex size-8 items-center justify-center rounded-full border bg-card text-foreground disabled:opacity-30"
+          className="flex size-11 shrink-0 items-center justify-center rounded-full border bg-card text-foreground disabled:opacity-30"
         >
           <ChevronLeft className="size-4" />
         </button>
 
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 flex-wrap items-center justify-center gap-x-2">
           <span
             className={cn(
-              'text-xs font-semibold uppercase tracking-wider',
+              'min-w-0 break-words text-center text-xs font-semibold uppercase tracking-wider',
               TEAM_TEXT[active % TEAM_TEXT.length],
             )}
           >
             {teams[active]?.name}
           </span>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center">
             {teams.map((t, i) => (
               <button
                 key={t.id}
                 type="button"
                 onClick={() => scrollToIndex(i)}
                 aria-label={`Показати ${t.name}`}
+                aria-pressed={i === active}
                 className={cn(
-                  'size-1.5 rounded-full transition',
-                  i === active ? TEAM_DOT[i % TEAM_DOT.length] : 'bg-muted-foreground/30',
+                  'flex size-11 items-center justify-center rounded-full after:size-1.5 after:rounded-full',
+                  i === active ? TEAM_DOT[i % TEAM_DOT.length] : 'after:bg-muted-foreground/30',
                 )}
               />
             ))}
@@ -236,7 +247,7 @@ export function PitchLineup({
           onClick={() => scrollToIndex(Math.min(teams.length - 1, active + 1))}
           disabled={active === teams.length - 1}
           aria-label="Наступна команда"
-          className="flex size-8 items-center justify-center rounded-full border bg-card text-foreground disabled:opacity-30"
+          className="flex size-11 shrink-0 items-center justify-center rounded-full border bg-card text-foreground disabled:opacity-30"
         >
           <ChevronRight className="size-4" />
         </button>
