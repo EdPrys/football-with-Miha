@@ -61,8 +61,9 @@ export function CreateGameIcon(props: NavIconProps) {
 export function NotificationsIcon(props: NavIconProps) {
   return (
     <IconFrame {...props}>
-      <path d="M9.5 20a2.8 2.8 0 0 0 5 0M12 3V2M5 17h14c-1.5-1.8-2-3.7-2-7a5 5 0 0 0-10 0c0 3.3-.5 5.2-2 7Z" />
-      <path d="M9.5 13.5a6 6 0 0 1 5 0" />
+      <path d="M9 8h2v3h3V8h7v5h-6a6 6 0 1 1-6-5Z" />
+      <circle cx="9" cy="14" r="2" />
+      <path d="M17 4V2.5M20 5l1.5-1.5" />
     </IconFrame>
   );
 }
