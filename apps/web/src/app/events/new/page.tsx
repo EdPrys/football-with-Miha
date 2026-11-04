@@ -139,6 +139,9 @@ function NewEventForm({
   const [price, setPrice] = useState(
     initialDraft.price ?? (template?.priceMinor == null ? '' : String(template.priceMinor / 100)),
   );
+  const [paymentRequired, setPaymentRequired] = useState(
+    initialDraft.paymentRequired ?? Number(price.replace(',', '.')) > 0,
+  );
   const [level, setLevel] = useState<NonNullable<Template['level']> | ''>(
     (initialDraft.level === '' || Object.hasOwn(GAME_LEVEL_LABEL, initialDraft.level ?? '')
       ? initialDraft.level
@@ -170,6 +173,7 @@ function NewEventForm({
           numberOfTeams,
           playersPerTeam,
           price,
+          paymentRequired,
           level,
           newcomerInfo,
           organizerPhone,
@@ -190,6 +194,7 @@ function NewEventForm({
     numberOfTeams,
     playersPerTeam,
     price,
+    paymentRequired,
     level,
     newcomerInfo,
     organizerPhone,
@@ -256,15 +261,16 @@ function NewEventForm({
       return toast.error('Перевір дату та час');
     if (startAt <= new Date()) return toast.error('Початок гри має бути в майбутньому');
     if (endAt <= startAt) return toast.error('Кінець гри має бути пізніше початку');
-    const amount = price.trim() === '' ? null : Number(price.replace(',', '.'));
+    if (paymentRequired && price.trim() === '')
+      return toast.error('Вкажи вартість участі в гривнях');
+    const amount = paymentRequired ? Number(price.replace(',', '.')) : 0;
     if (
-      amount !== null &&
-      (!Number.isFinite(amount) ||
-        amount < 0 ||
-        amount > 1_000_000 ||
-        Math.abs(amount * 100 - Math.round(amount * 100)) > 0.00001)
+      !Number.isFinite(amount) ||
+      (paymentRequired && amount <= 0) ||
+      amount > 1_000_000 ||
+      Math.abs(amount * 100 - Math.round(amount * 100)) > 0.00001
     )
-      return toast.error('Вкажи коректну суму в гривнях, до двох знаків після коми');
+      return toast.error('Вкажи суму від 0,01 до 1 000 000 грн, до двох знаків після коми');
     create.mutate({
       fieldId,
       startAt,
@@ -272,7 +278,7 @@ function NewEventForm({
       numberOfTeams: Number(numberOfTeams),
       playersPerTeam: Number(playersPerTeam),
       invitedUserIds: invitedIds,
-      priceMinor: amount === null ? null : Math.round(amount * 100),
+      priceMinor: Math.round(amount * 100),
       level: level || null,
       newcomerInfo: newcomerInfo.trim() || null,
       organizerPhone: organizerPhone.trim() || null,
@@ -497,22 +503,41 @@ function NewEventForm({
           </div>
           <div className="space-y-4 border-t border-border pt-5">
             <h2 className="text-sm font-semibold">Умови для гравців</h2>
-            <div className="space-y-1.5">
-              <Label htmlFor="game-price">Вартість з гравця, грн (необов’язково)</Label>
-              <Input
-                id="game-price"
-                type="number"
-                inputMode="decimal"
-                min="0"
-                max="1000000"
-                step="0.01"
-                placeholder="Уточнюється"
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">
-                0 — безкоштовно. Порожнє поле — вартість уточнюється. Оплата поза Kopanka.
-              </p>
+            <div className="space-y-3">
+              <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg border border-input px-3 py-2 text-sm font-medium">
+                <input
+                  id="game-payment-required"
+                  type="checkbox"
+                  checked={paymentRequired}
+                  onChange={(e) => setPaymentRequired(e.target.checked)}
+                  aria-controls={paymentRequired ? 'game-price-fields' : undefined}
+                  className="size-5 shrink-0 accent-primary"
+                />
+                Потрібна оплата за гру
+              </label>
+              {paymentRequired ? (
+                <div id="game-price-fields" className="space-y-1.5">
+                  <Label htmlFor="game-price">Сума з одного гравця, грн</Label>
+                  <Input
+                    id="game-price"
+                    type="number"
+                    inputMode="decimal"
+                    min="0.01"
+                    max="1000000"
+                    step="0.01"
+                    required
+                    placeholder="Наприклад, 150"
+                    value={price}
+                    onChange={(e) => setPrice(e.target.value)}
+                    aria-describedby="game-payment-info"
+                  />
+                  <p id="game-payment-info" className="text-xs text-muted-foreground">
+                    Оплата узгоджується з організатором поза Kopanka.
+                  </p>
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground">Участь у грі безкоштовна.</p>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="game-level">Рівень гри</Label>
