@@ -5,6 +5,8 @@
   "siteUrl": "https://kopanka.pro",
   "campaign": "organizers_pilot",
   "maxPilotContacts": 10,
+  "maxActiveConversations": 7,
+  "idleConversationHours": 48,
   "maxNewContactsPerDay": 3,
   "maxMessagesPerDay": 15,
   "minSendIntervalSeconds": 300,

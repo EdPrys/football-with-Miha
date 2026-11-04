@@ -125,5 +125,9 @@ and registration/joining of their existing group. Template replies avoid model
 calls; persist prepared replies and reported token usage across restarts. Optional
 count-only metrics use a separate capability token and opaque cohort campaigns;
 never infer the Telegram person's identity or activation from cohort counts.
+Pilots have at most seven active conversations and ten initial-contact attempts.
+Idle conversations wait after 48h without reminders. A drained pilot creates private
+JSON/Markdown snapshots and awaits recorded owner review plus explicit next-cycle
+start; restarts/resume must not bypass this gate or reset suppression/daily quotas.
 Account connection, model configuration, pilot city/sources and live verification
 are still pending. See `docs/OUTREACH_AGENT.md`.

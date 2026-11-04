@@ -1,4 +1,14 @@
 import { canSend, isOptOut, kyivDay, transitionContact } from '@app/domain/outreach';
+import {
+  ensurePilot,
+  activeCount,
+  mayStartContact,
+  reserveContact,
+  settleIdle,
+  reopenWaiting,
+  finishPilotIfReady,
+  pilotReport,
+} from './pilot.js';
 import { randomBytes } from 'node:crypto';
 import { footballPost, leadPriority, replyKey, shortReply, templateReply } from './playbook.js';
 import { introduction, safeReply, type Model, type UsageSink } from './model.js';
@@ -53,6 +63,19 @@ export async function discover(
   now = new Date(),
 ) {
   if (state.paused) throw new Error('Agent paused; inspect state before resuming');
+  ensurePilot(state, config, now);
+  await save(state);
+  if (
+    state.pilot &&
+    (state.pilot.status !== 'running' ||
+      activeCount(state) >= state.pilot.concurrency ||
+      state.pilot.contactIds.length +
+        Object.values(state.contacts).filter(
+          (c) => c.status === 'candidate' || c.status === 'approved',
+        ).length >=
+        state.pilot.limit)
+  )
+    return;
   if (!config.city || !config.sources.length)
     throw new Error('Set city and source groups before discovery');
   for (const source of config.sources) {
@@ -102,14 +125,26 @@ export async function cycle(
   save: Save,
   now = new Date(),
 ) {
+  const startedClock = Date.now();
   if (state.paused || Object.values(state.contacts).some((c) => c.pendingSend))
     throw new Error('Agent paused or send delivery uncertain; operator review required');
+  const pilot = ensurePilot(state, config, now);
+  await save(state);
+  if (pilot.status === 'awaiting_review') return;
+  if (activeCount(state) > pilot.concurrency) {
+    state.paused =
+      'Existing active conversations exceed the configured limit; owner review required';
+    await save(state);
+    throw new Error(state.paused);
+  }
   for (const contact of Object.values(state.contacts).sort(
     (a, b) =>
       Number(a.status === 'approved') - Number(b.status === 'approved') ||
       (b.priority ?? 1) - (a.priority ?? 1),
   )) {
-    if (!['approved', 'contacted', 'interested'].includes(contact.status)) continue;
+    if (!['approved', 'contacted', 'interested', 'waiting'].includes(contact.status)) continue;
+    if (contact.status === 'waiting' && !pilot.contactIds.includes(contact.id)) continue;
+    if (contact.status === 'approved' && !mayStartContact(state)) continue;
     ensureCampaign(contact, config);
     const incoming = await transport.inbox(contact);
     // Cursor advances only over a fetched snapshot, never over our new send ID:
@@ -124,11 +159,13 @@ export async function cycle(
     }
     if (ownerReplied && contact.status !== 'approved') {
       contact.status = transitionContact(contact.status, 'handoff');
+      contact.result = 'owner_help';
       contact.note = 'Owner replied outside the agent; automatic replies stopped';
     }
     // Never send an introduction into a conversation someone has already started.
     if (contact.status === 'approved' && incoming.length) {
       contact.status = transitionContact(contact.status, 'handoff');
+      contact.result = 'owner_help';
       contact.note = 'Existing conversation: owner should review before contact';
     }
     const unhandled = contact.messages.filter(
@@ -137,15 +174,16 @@ export async function cycle(
     if (unhandled.some((m) => isOptOut(m.text))) {
       contact.status = transitionContact(contact.status, 'declined');
       contact.note = 'Opt-out';
+      contact.result = 'declined';
+    }
+    settleIdle(state, contact, now);
+    if (contact.status === 'waiting' && unhandled.length && !reopenWaiting(state, contact)) {
+      await save(state);
+      continue;
     }
     await save(state);
     const initial = contact.status === 'approved';
-    if (
-      initial &&
-      Object.values(state.contacts).filter((c) => c.messages.some((m) => m.direction === 'out'))
-        .length >= config.maxPilotContacts
-    )
-      continue;
+    if (initial && !mayStartContact(state)) continue;
     const day = usage(state, now);
     if (
       !canSend({
@@ -178,6 +216,7 @@ export async function cycle(
         if (!decision) {
           if ((contact.modelReplies ?? 0) >= config.maxModelRepliesPerContact) {
             contact.status = transitionContact(contact.status, 'handoff');
+            contact.result = 'owner_help';
             contact.note = 'Model reply limit reached; owner can help with this specific question';
             await save(state);
             continue;
@@ -199,12 +238,19 @@ export async function cycle(
         plan.action === 'decline' ? 'declined' : 'handoff',
       );
       contact.note = plan.reason;
+      contact.result =
+        plan.action === 'decline'
+          ? 'declined'
+          : plan.reason.startsWith('Conversation complete')
+            ? 'conversation_closed'
+            : 'owner_help';
       await save(state);
       continue;
     }
     const text = plan.text;
     if (!safeReply(text, config) || !shortReply(text)) {
       contact.status = transitionContact(contact.status, 'handoff');
+      contact.result = 'owner_help';
       contact.note = 'Reply failed short-copy validation';
       await save(state);
       continue;
@@ -231,15 +277,32 @@ export async function cycle(
       }
       continue;
     }
+    const sendAt = new Date(now.getTime() + Math.max(0, Date.now() - startedClock));
+    if (
+      !canSend({
+        status: contact.status,
+        initial,
+        now: sendAt,
+        sentToday: day.messages,
+        initialToday: day.initial,
+        maxMessages: config.maxMessagesPerDay,
+        maxInitial: config.maxNewContactsPerDay,
+        lastSentAt: state.lastSentAt,
+        minIntervalSeconds: config.minSendIntervalSeconds,
+        hasUnansweredInbound: unhandled.length > 0,
+      })
+    )
+      continue;
     // Reserve quota and intent BEFORE the network call. Crashes/errors never retry blindly.
+    if (initial) reserveContact(state, contact);
     contact.pendingSend = text;
     day.messages++;
     if (initial) day.initial++;
-    state.lastSentAt = now.toISOString();
+    state.lastSentAt = sendAt.toISOString();
     await save(state);
     try {
       const id = await transport.send(contact, text);
-      contact.messages.push({ id, text, at: now.toISOString(), direction: 'out' });
+      contact.messages.push({ id, text, at: sendAt.toISOString(), direction: 'out' });
       contact.pendingSend = undefined;
       if (initial) contact.status = transitionContact(contact.status, 'contacted');
       else if (plan.action === 'interested')
@@ -253,6 +316,7 @@ export async function cycle(
       throw new Error(state.paused);
     }
   }
+  if (finishPilotIfReady(state, now)) await save(state);
 }
 export function report(state: State) {
   const inputRate = Number(process.env.OUTREACH_INPUT_USD_PER_MILLION || NaN);
@@ -278,6 +342,7 @@ export function report(state: State) {
   const counts: Record<string, number> = {};
   for (const c of Object.values(state.contacts)) counts[c.status] = (counts[c.status] ?? 0) + 1;
   return {
+    pilot: pilotReport(state),
     counts,
     contacted: Object.values(state.contacts).filter((c) =>
       c.messages.some((m) => m.direction === 'out'),

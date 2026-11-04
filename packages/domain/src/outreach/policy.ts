@@ -1,11 +1,19 @@
 /** Outreach policy is independent of Telegram, model providers and storage. */
 export type ContactStatus =
-  'candidate' | 'approved' | 'contacted' | 'interested' | 'handoff' | 'declined' | 'activated';
+  | 'candidate'
+  | 'approved'
+  | 'contacted'
+  | 'interested'
+  | 'waiting'
+  | 'handoff'
+  | 'declined'
+  | 'activated';
 const transitions: Record<ContactStatus, readonly ContactStatus[]> = {
   candidate: ['approved', 'declined'],
   approved: ['contacted', 'declined', 'handoff'],
-  contacted: ['interested', 'declined', 'handoff', 'activated'],
-  interested: ['declined', 'handoff', 'activated'],
+  contacted: ['interested', 'waiting', 'declined', 'handoff', 'activated'],
+  interested: ['waiting', 'declined', 'handoff', 'activated'],
+  waiting: ['contacted', 'interested', 'declined', 'handoff', 'activated'],
   handoff: ['declined', 'activated'],
   declined: [],
   activated: [],
@@ -53,4 +61,21 @@ export function canSend(input: {
     return false;
   if (input.initial) return input.status === 'approved' && input.initialToday < input.maxInitial;
   return ['contacted', 'interested'].includes(input.status) && input.hasUnansweredInbound;
+}
+
+export function isActiveConversation(status: ContactStatus): boolean {
+  return status === 'contacted' || status === 'interested';
+}
+export function conversationIsIdle(input: {
+  lastActivityAt: string;
+  now: Date;
+  hours: number;
+  hasUnhandledReply: boolean;
+}): boolean {
+  const at = Date.parse(input.lastActivityAt);
+  return (
+    !input.hasUnhandledReply &&
+    Number.isFinite(at) &&
+    input.now.getTime() - at >= input.hours * 3600_000
+  );
 }
