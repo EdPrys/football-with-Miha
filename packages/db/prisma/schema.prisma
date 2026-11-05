@@ -76,6 +76,7 @@ model User {
   id             String   @id @default(cuid())
   name           String
   email          String   @unique
+  sessionVersion Int      @default(0)
   passwordHash   String
   role           Role     @default(PLAYER)
   avatarUrl      String?
@@ -89,6 +90,7 @@ model User {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
+  passwordReset       PasswordReset?
   profile             PlayerProfile?
   organizedEvents     Event[]                @relation("EventOrganizer")
   participations      EventParticipant[]
@@ -398,4 +400,27 @@ model EventWaitlist {
 
   @@id([eventId, userId])
   @@index([userId])
+}
+
+// Only a SHA-256 digest of the random recovery token is persisted.
+// One record per account; issuing a new token replaces the previous one.
+model PasswordReset {
+  userId    String    @id
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  createdAt DateTime  @default(now())
+  expiresAt DateTime
+  usedAt    DateTime?
+
+  @@index([expiresAt])
+}
+
+// Shared recovery request/attempt budgets, across API replicas and restarts.
+// Keys are HMACs; raw email addresses and client IPs are not stored here.
+model AuthRateLimit {
+  key       String   @id
+  count     Int
+  expiresAt DateTime
+
+  @@index([expiresAt])
 }

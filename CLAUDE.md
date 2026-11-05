@@ -131,3 +131,13 @@ JSON/Markdown snapshots and awaits recorded owner review plus explicit next-cycl
 start; restarts/resume must not bypass this gate or reset suppression/daily quotas.
 Account connection, model configuration, pilot city/sources and live verification
 are still pending. See `docs/OUTREACH_AGENT.md`.
+
+## Password recovery (2026-11-05)
+
+Recovery uses Resend (`RESEND_API_KEY`, `EMAIL_FROM`, trusted `APP_URL`), 30-minute
+single-use hashed tokens and PostgreSQL request budgets. `User.sessionVersion`
+revokes all older JWTs after reset; legacy JWTs are version 0. Keep session version
+checks in authentication context, never expose reset records or tokens in public
+user payloads/logs/analytics. No automatic login after reset. Email sending is
+in-process without a durable queue. See docs/PASSWORD_RECOVERY.md for setup and
+verification limits; delivery has not been checked with a real sender.
