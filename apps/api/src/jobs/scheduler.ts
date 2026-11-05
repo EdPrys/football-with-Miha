@@ -16,6 +16,9 @@ export function startScheduler(log: FastifyBaseLogger): () => void {
     if (running) return;
     running = true;
     try {
+      const now = new Date();
+      await prisma.authRateLimit.deleteMany({ where: { expiresAt: { lt: now } } });
+      await prisma.passwordReset.deleteMany({ where: { expiresAt: { lt: now } } });
       const { finished, cancelled } = await finishOverdueEvents(prisma);
       if (finished.length || cancelled.length) {
         log.info({ finished, cancelled }, 'auto-finish: closed overdue games');

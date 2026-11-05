@@ -14,3 +14,8 @@ prisma/*.db
 # Personal Codex permissions stay on this machine.
 /.codex/config.toml
 /config/codex-project.toml
+
+# Private outreach account sessions, lead lists and conversations.
+.outreach/
+**/telegram.session
+**/telegram.session.*

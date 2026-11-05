@@ -7,9 +7,11 @@ import { GA_ID, META_PIXEL_ID, captureAttribution, trackPageView } from '@/lib/a
 
 export function Analytics() {
   const pathname = usePathname();
+  const sensitive = pathname === '/reset-password' || pathname === '/forgot-password';
   const firstView = useRef(true);
 
   useEffect(() => {
+    if (sensitive) return;
     captureAttribution();
     // The pixel snippet counts the first page view itself; GA4 tracks
     // client-side navigation on its own (enhanced measurement).
@@ -18,7 +20,9 @@ export function Analytics() {
       return;
     }
     trackPageView();
-  }, [pathname]);
+  }, [pathname, sensitive]);
+
+  if (sensitive) return null;
 
   return (
     <>

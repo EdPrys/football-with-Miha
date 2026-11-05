@@ -5,3 +5,9 @@
 .git
 .env
 .env.*
+
+# Outreach sessions and prospect conversations never enter build contexts.
+**/.outreach
+**/telegram.session*
+**/.env
+**/.env.*

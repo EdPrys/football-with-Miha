@@ -79,6 +79,7 @@ pnpm dev
 apps/api          Fastify 5 + tRPC 11 + Zod 3 + SuperJSON
 apps/web          Next.js 16 + React 19: інтерфейс гравців та організаторів
 apps/admin-web    Next.js: керування користувачами й каталогом
+apps/outreach     окремий агент залучення організаторів (dry-run, не запущений)
 packages/domain   бізнес-правила та їхні тести
 packages/db       Prisma 6: схема, міграції, каталог
 ```
@@ -93,6 +94,7 @@ packages/db       Prisma 6: схема, міграції, каталог
 - [Поточні правила продукту](docs/PRODUCT_PLAN.md)
 - [Навички, зірки та MVP](docs/SKILLS.md)
 - [Перевірений каталог майданчиків](data/venues/README.md)
+- [Агент залучення організаторів: підготовка й підключення](docs/OUTREACH_AGENT.md)
 - [Незавершені задачі та перевірки](docs/BACKLOG.md)
 - [Інструкції для внесення змін](CLAUDE.md)
 

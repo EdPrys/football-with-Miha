@@ -3,6 +3,10 @@ import { TRPCClientError } from '@trpc/client';
 // API messages are English; players see Ukrainian. Unknown messages fall back
 // to a generic text per error code, so a raw code like BAD_REQUEST never leaks.
 const MESSAGES: Record<string, string> = {
+  'Password reset link is invalid or expired':
+    'Посилання недійсне, прострочене або вже використане. Отримай нове посилання.',
+  'Password recovery is unavailable': 'Відновлення пароля тимчасово недоступне. Спробуй пізніше.',
+
   'Waitlist is closed': 'Лист очікування для цієї гри вже закритий',
   'Reminder is not available for this game': 'Нагадування доступне лише до початку гри',
   'Join the game before enabling a reminder': 'Спочатку запишися на гру, щоб увімкнути нагадування',
@@ -74,7 +78,8 @@ const MESSAGES: Record<string, string> = {
 const FIELD_ERRORS: Record<string, string> = {
   email: 'Введи коректний email',
   name: "Введи ім'я",
-  password: 'Введи пароль',
+  password: 'Введи коректний пароль (до 128 символів)',
+  token: 'Посилання недійсне. Отримай нове посилання для відновлення',
   avatarUrl: 'Не вдалося зберегти зображення',
 };
 
