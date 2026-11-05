@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { Suspense, useState, type FormEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
@@ -124,6 +125,13 @@ function LoginForm() {
             <p role="alert" className="text-sm text-destructive">
               {errorMessage(mode === 'login' ? login.error : register.error)} Дані залишилися у
               формі — спробуй ще раз.
+            </p>
+          )}
+          {mode === 'login' && (
+            <p className="text-right text-sm">
+              <Link href="/forgot-password" className="text-primary underline">
+                Забув пароль?
+              </Link>
             </p>
           )}
           <Button type="submit" className="w-full" disabled={pending}>

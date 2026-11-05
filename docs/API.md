@@ -223,3 +223,15 @@ Authenticated `auth.me`, `auth.login` and `auth.register` responses include one'
 own `outreachCampaign` only for a valid Telegram/outreach signup campaign. This
 field is not added to public player/event profiles; organizers use it when
 sharing their game invitation so new players can be attributed to the same group.
+
+## Password recovery
+
+- `auth.passwordRecoveryAvailable`: public query, `{ available }` from configuration.
+- `auth.requestPasswordReset({ email })`: public mutation; generic `{ ok: true }`
+  regardless of account existence/email budget. May return SERVICE_UNAVAILABLE
+  (mail not configured) or TOO_MANY_REQUESTS (IP budget).
+- `auth.resetPassword({ token, password })`: public mutation; consumes the recovery
+  token, changes password and revokes previous sessions; returns `{ ok: true }`.
+  Invalid/expired/used tokens return BAD_REQUEST. No automatic login.
+
+Setup, limits and delivery caveats: [PASSWORD_RECOVERY.md](PASSWORD_RECOVERY.md).

@@ -6,6 +6,7 @@ import { writeFile } from 'node:fs/promises';
 import { createTRPCClient, httpBatchLink, TRPCClientError } from '@trpc/client';
 import superjson from 'superjson';
 import jwt from 'jsonwebtoken';
+import { createHash } from 'node:crypto';
 import type { AppRouter } from '../src/routers/index.js';
 
 const databaseUrl = process.env.INTEGRATION_DATABASE_URL;
@@ -34,6 +35,9 @@ for (const key of [
   'S3_ACCESS_KEY_ID',
   'S3_SECRET_ACCESS_KEY',
   'PUBLIC_API_URL',
+  'RESEND_API_KEY',
+  'EMAIL_FROM',
+  'TRUST_RAILWAY_PROXY',
 ])
   process.env[key] = '';
 const { prisma } = await import('../../../packages/db/src/index.js');
@@ -732,6 +736,134 @@ try {
       assert.equal((await guest.mvp.status.query({ eventId: populated.id })).resolved, true);
     },
   );
+  await check(
+    'Password recovery: generic request, single-use expiry, concurrent reset and session revocation',
+    async () => {
+      const originalFetch = globalThis.fetch;
+      const sent: { to: string[]; text: string }[] = [];
+      process.env.RESEND_API_KEY = 'test-recovery-key';
+      process.env.EMAIL_FROM = 'Kopanka <test@kopanka.example>';
+      process.env.APP_URL = 'https://kopanka.example';
+      // Only the provider HTTP call is stubbed; requests, JWT, Argon2 and DB are real.
+      globalThis.fetch = async (input, init) => {
+        assert.equal(String(input), 'https://api.resend.com/emails');
+        const body = JSON.parse(String(init?.body)) as { to: string[]; text: string };
+        sent.push(body);
+        return new Response(JSON.stringify({ id: 'mock-email' }), { status: 200 });
+      };
+      try {
+        const actor = players[11]!;
+        assert.equal((await guest.auth.passwordRecoveryAvailable.query()).available, true);
+        const known = await guest.auth.requestPasswordReset.mutate({
+          email: actor.email.toUpperCase(),
+        });
+        const unknown = await guest.auth.requestPasswordReset.mutate({
+          email: `missing-${suffix}`,
+        });
+        assert.deepEqual(known, unknown);
+        assert.equal(sent.length, 1);
+        assert.deepEqual(sent[0]!.to, [actor.email]);
+        const firstLink = new URL(sent[0]!.text.match(/https:\/\/\S+/)![0]);
+        assert.equal(firstLink.origin, 'https://kopanka.example');
+        assert.equal(firstLink.pathname, '/reset-password');
+        assert.equal(firstLink.search, '');
+        const firstToken = new URLSearchParams(firstLink.hash.slice(1)).get('token')!;
+        privateValues.push(firstToken);
+        const digest = (token: string) => createHash('sha256').update(token).digest('hex');
+        const stored = await prisma.passwordReset.findUniqueOrThrow({
+          where: { userId: actor.id },
+        });
+        assert.equal(stored.tokenHash, digest(firstToken));
+        assert.notEqual(stored.tokenHash, firstToken);
+        assert.equal(+stored.expiresAt - +stored.createdAt, 30 * 60_000);
+        await guest.auth.requestPasswordReset.mutate({ email: actor.email });
+        assert.equal(sent.length, 1, 'Cooldown must not resend or rotate the link');
+        assert.equal(
+          (await actor.api.auth.me.query()).user.id,
+          actor.id,
+          'Request must not revoke sessions',
+        );
+        await denied(
+          guest.auth.resetPassword.mutate({ token: firstToken, password: 'short' }),
+          'BAD_REQUEST',
+        );
+        await denied(
+          guest.auth.resetPassword.mutate({ token: 'f'.repeat(64), password: 'NewPassword456' }),
+          'BAD_REQUEST',
+        );
+        // Expiry and reissue use only this disposable fixture, never production dates.
+        await prisma.passwordReset.update({
+          where: { userId: actor.id },
+          data: { expiresAt: new Date(Date.now() - 1), createdAt: new Date(Date.now() - 61_000) },
+        });
+        await denied(
+          guest.auth.resetPassword.mutate({ token: firstToken, password: 'NewPassword456' }),
+          'BAD_REQUEST',
+        );
+        await guest.auth.requestPasswordReset.mutate({ email: actor.email });
+        assert.equal(sent.length, 2);
+        await guest.auth.requestPasswordReset.mutate({ email: actor.email });
+        assert.equal(sent.length, 2, 'Email budget must silently suppress a fourth request');
+        const secondLink = new URL(sent[1]!.text.match(/https:\/\/\S+/)![0]);
+        const token = new URLSearchParams(secondLink.hash.slice(1)).get('token')!;
+        privateValues.push(token, 'NewPassword456');
+        await denied(
+          guest.auth.resetPassword.mutate({ token: firstToken, password: 'NewPassword456' }),
+          'BAD_REQUEST',
+        );
+        const attempts = await Promise.allSettled([
+          guest.auth.resetPassword.mutate({ token, password: 'NewPassword456' }),
+          client().auth.resetPassword.mutate({ token, password: 'NewPassword456' }),
+        ]);
+        assert.equal(attempts.filter((x) => x.status === 'fulfilled').length, 1);
+        assert.equal(attempts.filter((x) => x.status === 'rejected').length, 1);
+        await denied(
+          guest.auth.resetPassword.mutate({ token, password: 'NewPassword456' }),
+          'BAD_REQUEST',
+        );
+        await denied(actor.api.auth.me.query(), 'UNAUTHORIZED');
+        await denied(guest.auth.login.mutate({ email: actor.email, password }), 'BAD_REQUEST');
+        const fresh = await guest.auth.login.mutate({
+          email: actor.email,
+          password: 'NewPassword456',
+        });
+        privateValues.push(fresh.token);
+        assert.equal((await client(fresh.token).auth.me.query()).user.id, actor.id);
+        assert.equal(
+          (await prisma.user.findUniqueOrThrow({ where: { id: actor.id } })).sessionVersion,
+          1,
+        );
+        assert.equal('sessionVersion' in fresh.user, false);
+        const legacy = jwt.sign({ sub: actor.id }, process.env.JWT_SECRET!);
+        privateValues.push(legacy);
+        await denied(client(legacy).auth.me.query(), 'UNAUTHORIZED');
+        const { takeRecoveryAttempt } =
+          await import('../../../packages/domain/src/auth/password-recovery.js');
+        const concurrent = await Promise.all(
+          Array.from({ length: 12 }, () =>
+            takeRecoveryAttempt(prisma, 'recovery-budget-fixture', 3),
+          ),
+        );
+        assert.equal(concurrent.filter(Boolean).length, 3);
+        const nextWindow = await takeRecoveryAttempt(
+          prisma,
+          'recovery-budget-fixture',
+          3,
+          new Date(Date.now() + 16 * 60_000),
+        );
+        assert.equal(nextWindow, true);
+      } finally {
+        globalThis.fetch = originalFetch;
+        delete process.env.RESEND_API_KEY;
+        delete process.env.EMAIL_FROM;
+      }
+      assert.equal((await guest.auth.passwordRecoveryAvailable.query()).available, false);
+      await denied(
+        guest.auth.requestPasswordReset.mutate({ email: players[11]!.email }),
+        'SERVICE_UNAVAILABLE',
+      );
+    },
+  );
 } catch (error) {
   failed = true;
   console.error('FAILED:', redact(error instanceof Error ? error.message : String(error)));
@@ -743,6 +875,7 @@ try {
     await prisma.event.deleteMany();
     await prisma.venue.deleteMany();
     await prisma.user.deleteMany();
+    await prisma.authRateLimit.deleteMany();
   }
   const report = {
     generatedAt: new Date().toISOString(),

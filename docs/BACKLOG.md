@@ -70,3 +70,10 @@ with stats, self-assessed skills and played-match links. No schema migration.
 Domain/API regression tests cover identity scoping, pagination and attendance filters.
 Production deployment and phone checks remain unverified; local Docker was unavailable
 for a fresh PostgreSQL integration run.
+
+## Password recovery (2026-11-05)
+
+Implemented single-use 30-minute email recovery, shared request budgets and
+revocation of existing sessions on successful reset. See PASSWORD_RECOVERY.md.
+Pending: Resend credentials/verified sender, production release and real inbox/
+phone verification. No live email delivery is claimed by the mocked provider tests.

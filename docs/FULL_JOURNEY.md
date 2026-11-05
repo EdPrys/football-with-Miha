@@ -93,3 +93,11 @@ providers remain disabled; the test creates no real messages.
 
 Set `JOURNEY_REPORT_PATH` to write an isolated run report outside
 `docs/FULL_JOURNEY_RESULT.json` when preserving that historical report.
+
+## Password recovery extension (2026-11-05)
+
+Journey now covers recovery through the real API/database: identical known/unknown
+responses, case-insensitive recipient matching, cooldown, expiry, replacement,
+concurrent single-use consumption, password verification and revocation of current
+and legacy sessions. Only the provider HTTP call is mocked; no live email is sent.
+Use `JOURNEY_REPORT_PATH` to preserve the historical report. See PASSWORD_RECOVERY.md.

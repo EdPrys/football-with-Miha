@@ -90,3 +90,13 @@ read-only лічильники кампанії. Без нього маршру�
 `OUTREACH_CAMPAIGN_PREFIX` має збігатися з campaign конфігурації агента.
 Ці налаштування та окремий worker ще не ввімкнені в production. Деталі:
 [OUTREACH_AGENT.md](OUTREACH_AGENT.md). Змін схеми/міграцій для лічильників немає.
+
+## Password recovery email
+
+Apply migration `20261105160000_password_recovery` before starting the updated API.
+Set API-only `RESEND_API_KEY`, `EMAIL_FROM` (verified sender) and HTTPS `APP_URL`.
+For Railway edge deployments set `TRUST_RAILWAY_PROXY=true` so recovery IP budgets
+use edge-provided `X-Real-IP`; do not enable for direct public API access.
+Without mail configuration the recovery form explicitly shows unavailability.
+See [PASSWORD_RECOVERY.md](PASSWORD_RECOVERY.md) for live verification and delivery
+limitations. No live email delivery has been verified yet.

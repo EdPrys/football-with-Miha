@@ -3,6 +3,8 @@ import { assertValidPassword, createUserWithProfile, DomainError } from '@app/do
 import type { User } from '@app/db';
 import { router, publicProcedure, protectedProcedure } from '../trpc.js';
 import { hashPassword, verifyPassword } from '../auth/password.js';
+import { requestPasswordRecovery, resetPassword } from '../auth/recovery.js';
+import { passwordMailConfig } from '../integrations/password-mail.js';
 import { signToken } from '../auth/jwt.js';
 
 /** Strip secrets before returning a user to a client. */
@@ -25,6 +27,26 @@ function publicUser(user: User) {
 }
 
 export const authRouter = router({
+  passwordRecoveryAvailable: publicProcedure
+    .meta({ description: 'Public. Whether recovery email delivery is configured.' })
+    .query(() => ({ available: !!passwordMailConfig() })),
+
+  requestPasswordReset: publicProcedure
+    .meta({
+      description:
+        'Public. Request a recovery email. Identical success for unknown, known and account-throttled addresses. IP budget: 20/15min; email: 3/15min; cooldown: 60s.',
+    })
+    .input(z.object({ email: z.string().trim().email().max(254) }))
+    .mutation(({ ctx, input }) => requestPasswordRecovery(ctx, input.email)),
+
+  resetPassword: publicProcedure
+    .meta({
+      description:
+        'Public. Consume a single-use 30-minute recovery token; changes password and revokes all previous sessions. Does not log in automatically.',
+    })
+    .input(z.object({ token: z.string().regex(/^[a-f0-9]{64}$/), password: z.string().max(128) }))
+    .mutation(({ ctx, input }) => resetPassword(ctx, input.token, input.password)),
+
   register: publicProcedure
     .meta({
       description:
@@ -53,7 +75,7 @@ export const authRouter = router({
         passwordHash,
         attribution: input.attribution,
       });
-      return { token: signToken(user.id), user: publicUser(user) };
+      return { token: signToken(user.id, user.sessionVersion), user: publicUser(user) };
     }),
 
   login: publicProcedure
@@ -64,7 +86,7 @@ export const authRouter = router({
       if (!user || !(await verifyPassword(user.passwordHash, input.password))) {
         throw new DomainError('VALIDATION', 'Invalid email or password');
       }
-      return { token: signToken(user.id), user: publicUser(user) };
+      return { token: signToken(user.id, user.sessionVersion), user: publicUser(user) };
     }),
 
   me: protectedProcedure
